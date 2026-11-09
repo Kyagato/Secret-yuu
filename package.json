@@ -1,1 +1,1 @@
-{"name":"chat-rahasia","version":"1.0.0","private":true,"type":"module","description":"Website percakapan dengan balasan anonim","scripts":{"start":"node build.mjs && node dev.mjs","build":"node build.mjs","test":"node build.mjs && node test.mjs"}}
+{"name":"r4hasiakuu","version":"1.0.0","private":true,"type":"module","description":"Website percakapan dengan balasan anonim","scripts":{"start":"node build.mjs && node dev.mjs","build":"node build.mjs","test":"node build.mjs && node test.mjs"}}
