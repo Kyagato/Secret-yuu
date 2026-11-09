@@ -1,0 +1,7 @@
+dist/
+local.sqlite*
+node_modules/
+.env
+.env.*
+!.env.example
+*.tar.gz

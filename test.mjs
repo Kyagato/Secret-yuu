@@ -1,0 +1,14 @@
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+import worker from './dist/server/index.js';
+const sqlite=new DatabaseSync(':memory:');sqlite.exec(readFileSync('drizzle/0000_rooms.sql','utf8'));
+const DB={prepare(sql){let args=[];const s=sqlite.prepare(sql);return {bind(...a){args=a;return this},async all(){return {results:s.all(...args)}},async first(){return s.get(...args)},async run(){return s.run(...args)}}}};
+const call=(path,body)=>worker.fetch(new Request('https://sela.test/api/'+path,body?{method:'POST',headers:{Origin:'https://sela.test','Content-Type':'application/json'},body:JSON.stringify(body)}:{}),{DB});
+let r=await call('rooms',{title:'Cerita pertama',body:'Hari ini saya ingin bercerita.',category:'Isi hati'});assert.equal(r.status,201);const {id}=await r.json();
+r=await call('rooms/'+id+'/messages',{body:'Terima kasih sudah berbagi.'});assert.equal(r.status,201);
+const data=await(await call('rooms/'+id+'/messages')).json();assert.equal(data.messages.length,1);assert.equal(data.messages[0].body,'Terima kasih sudah berbagi.');assert.equal(data.messages[0].name,undefined);
+assert.equal((await(await call('rooms')).json())[0].replies,1);
+assert.equal((await call('rooms',{title:'a',body:'b',category:'x'})).status,400);
+assert.equal((await call('rooms/'+id+'/messages',{body:' '})).status,400);
+console.log('PASS: create, list, anonymous replies, validation, persistence.');
