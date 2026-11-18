@@ -68,7 +68,10 @@
       <label for="body">Ceritakan di sini</label>
       <textarea id="body" required minlength="10" maxlength="2000" placeholder="Tidak harus rapi. Tulis saja yang kamu rasakan…"></textarea>
       <p class="status" id="createError" role="alert"></p>
-      <sakuga-button type="submit">Bagikan cerita ↗</sakuga-button>
+      <div class="compose-actions">
+        <sakuga-button variant="secondary" id="saveStory">Simpan</sakuga-button>
+        <sakuga-button type="submit">Bagikan cerita ↗</sakuga-button>
+      </div>
     </form>
   </dialog>
 
@@ -87,21 +90,21 @@
       <sakuga-button type="submit">Kirim balasan ↗</sakuga-button>
     </form>
   </dialog>
+  <sakuga-toast id="toast"></sakuga-toast>
   <script src="./button.js"></script>
   <script src="./input.js"></script>
   <script src="./toggle.js"></script>
+  <script src="./toast.js"></script>
   <script src="./motion.js"></script>
 <script>
 const $=s=>document.querySelector(s);let rooms=[],current=null,timer;
 function syncSakugaCanvas(){
-  const canvas = document.querySelector('canvas.sakuga-fx');
-  if (!canvas) return;
   const active = document.querySelector('dialog[open]');
-  if (active && active.open) {
-    if (canvas.parentElement !== active) active.appendChild(canvas);
-  } else {
-    if (canvas.parentElement !== document.body) document.body.appendChild(canvas);
-  }
+  const target = active && active.open ? active : document.body;
+  const toast = document.querySelector('#toast');
+  if (toast && toast.parentElement !== target) target.appendChild(toast);
+  const canvas = document.querySelector('canvas.sakuga-fx');
+  if (canvas && canvas.parentElement !== target) target.appendChild(canvas);
 }
 new MutationObserver(syncSakugaCanvas).observe(document.body, { childList: true });
 document.addEventListener('pointerdown', syncSakugaCanvas, true);
@@ -113,9 +116,23 @@ const time=t=>{let m=Math.max(0,Math.floor((Date.now()-t)/60000));return m<1?'Ba
 async function api(path,options){const r=await fetch('/api/'+path,options);const b=await r.json();if(!r.ok)throw Error(b.error||'Ada kendala. Coba lagi.');return b}const post=b=>({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
 function render(){let items=rooms.filter(r=>(r.title+' '+r.body).toLowerCase().includes($('#search').value.toLowerCase()));if($('#sort').checked)items.sort((a,b)=>b.replies-a.replies);$('#feed').innerHTML=items.length?items.map(r=>`<article class="card"><div class="cardtop"><span class="avatar">✳</span><b class="card-author">Seseorang</b><span>· ${time(r.created)}</span><span class="label">${esc(r.category)}</span></div><h3><button data-room="${r.id}">${esc(r.title)}</button></h3><p>${esc(r.body.slice(0,180))}${r.body.length>180?'…':''}</p><div class="cardfoot"><span>♧ &nbsp; ${r.replies} balasan &nbsp; · &nbsp; Semua anonim</span><button class="textbtn" data-room="${r.id}">Ikut percakapan ↗</button></div></article>`).join(''):`<div class="empty"><div class="empty-icon" aria-hidden="true">☁</div><h3>${rooms.length?'Belum ada cerita yang cocok':'Ruang ini menunggu cerita pertamamu.'}</h3><p>${rooms.length?'Coba kata pencarian lain.':'Ada yang ingin kamu ceritakan hari ini?'}</p></div>`}
 async function load(){try{rooms=await api('rooms');render()}catch(e){$('#feed').innerHTML='<div class="empty"><h3>Ruang belum bisa dimuat</h3><p>'+esc(e.message)+'</p><button class="textbtn" id="retry">Coba lagi ↻</button></div>';$('#retry').onclick=load}}
-function updateSortLabels(){const popular=$('#sort').checked;$('#sortLatest').classList.toggle('active',!popular);$('#sortPopular').classList.toggle('active',popular);}
+function updateSortLabels(pop = false){
+  const popular = $('#sort').checked;
+  const latestEl = $('#sortLatest'), popularEl = $('#sortPopular');
+  latestEl.classList.toggle('active', !popular);
+  popularEl.classList.toggle('active', popular);
+  latestEl.classList.remove('pop');
+  popularEl.classList.remove('pop');
+  if (pop) {
+    const target = popular ? popularEl : latestEl;
+    void target.offsetWidth;
+    target.classList.add('pop');
+  }
+}
+$('#sortLatest').addEventListener('animationend', e => e.currentTarget.classList.remove('pop'));
+$('#sortPopular').addEventListener('animationend', e => e.currentTarget.classList.remove('pop'));
 $('#search').oninput=render;$('#search').onchange=render;
-$('#sort').addEventListener('change',()=>{updateSortLabels();render();});
+$('#sort').addEventListener('change',()=>{updateSortLabels(true);render();});
 updateSortLabels();
 let composeTimer = 0;
 $('#new').addEventListener('click', () => {
@@ -134,27 +151,43 @@ document.querySelectorAll('.close').forEach(b=>b.onclick=()=>b.closest('dialog')
 $('#title').addEventListener('input', () => {
   if ($('#createError').textContent) $('#createError').textContent = '';
 });
-$('#createForm').onsubmit = async event => {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const button = event.submitter || form.querySelector('[type="submit"]');
+async function submitStory(button, share) {
+  const form = $('#createForm');
   const titleField = $('#title');
+  const bodyField = $('#body');
+  const submitBtn = form.querySelector('[type="submit"]');
+  const saveBtn = $('#saveStory');
   const title = titleField.value;
+  const body = bodyField.value;
   if (title.trim().length < 5 || title.length > 120) {
     $('#createError').textContent = 'Judul perlu berisi 5–120 karakter.';
     titleField.focus();
     return;
   }
-  if (button.disabled) return;
-  button.disabled = true;
+  if (body.trim().length < 10 || body.length > 2000) {
+    $('#createError').textContent = 'Cerita perlu berisi 10–2.000 karakter.';
+    bodyField.focus();
+    return;
+  }
+  if (submitBtn.disabled || saveBtn.disabled) return;
+  submitBtn.disabled = true;
+  saveBtn.disabled = true;
   $('#createError').textContent = '';
+  const resetButtons = () => { submitBtn.disabled = false; saveBtn.disabled = false; };
   try {
-    const room = await api('rooms', post({ title, body: $('#body').value }));
-    button.done?.();
+    const room = await api('rooms', post({ title, body }));
     form.reset();
     titleField.value = '';
     const compose = $('#compose');
-    if (!compose.open) { await load(); button.disabled = false; return; }
+    if (!share) {
+      syncSakugaCanvas();
+      $('#toast').show('Cerita tersimpan');
+      await load();
+      resetButtons();
+      return;
+    }
+    button.done?.();
+    if (!compose.open) { await load(); resetButtons(); return; }
     const delay = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420;
     setTimeout(async () => {
       try {
@@ -162,13 +195,18 @@ $('#createForm').onsubmit = async event => {
         await openRoom(room.id, 'Cerita dibagikan.');
         await load();
       } finally {
-        button.disabled = false;
+        resetButtons();
       }
     }, delay);
   } catch (error) {
     $('#createError').textContent = error.message;
-    button.disabled = false;
+    resetButtons();
   }
+}
+$('#saveStory').addEventListener('click', e => submitStory(e.currentTarget, false));
+$('#createForm').onsubmit = event => {
+  event.preventDefault();
+  submitStory(event.submitter || event.currentTarget.querySelector('[type="submit"]'), true);
 };
 let replyTarget=null,roomMessages=[],roomVisit=0;
 const replyContext=document.createElement('div');replyContext.id='replyContext';replyContext.className='reply-context hidden';replyContext.setAttribute('role','status');

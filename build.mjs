@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 const html = readFileSync('index.html', 'utf8')
   .replace(/<link rel="stylesheet" href="\.\/(theme|motion)\.css">/g,
     (_, name) => '<style>\n' + readFileSync(name + '.css', 'utf8') + '\n</style>')
-  .replace(/<script src="\.\/(motion|button|input|toggle)\.js"><\/script>/g,
+  .replace(/<script src="\.\/(motion|button|input|toggle|toast)\.js"><\/script>/g,
     (_, name) => '<script>\n' + readFileSync(name + '.js', 'utf8') + '\n</script>');
 
 const api = readFileSync('worker/api.js', 'utf8');

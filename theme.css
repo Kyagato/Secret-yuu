@@ -22,6 +22,8 @@
   --sk-ink: var(--ink);
   --sk-dim: var(--muted);
   --sk-soft: var(--lavender);
+  --sk-pri: var(--violet);
+  --sk-on-pri: var(--paper);
   --sk-acc: var(--spark);
   --sk-sh: 4px 5px 0 var(--shadow);
   --sk-btn-line: var(--stroke);
@@ -260,8 +262,19 @@ sakuga-input.search {
   font-weight: 600;
   color: var(--muted);
   white-space: nowrap;
+  transform-origin: center;
 }
 .sort-label.active { color: var(--ink); font-weight: 700; }
+.sort-label.pop { animation: sort-label-pop 340ms cubic-bezier(.22, 1.35, .36, 1); }
+@keyframes sort-label-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.22) translateY(-3px); }
+  70% { transform: scale(.96); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sort-label.pop { animation: none; }
+}
 .card, .sidecard {
   padding: 22px;
   border: 1.5px solid var(--stroke);
@@ -347,6 +360,12 @@ textarea { display: block; min-height: 108px; resize: vertical; }
 form .primary, form sakuga-button { width: 100%; margin-top: 15px; }
 form sakuga-button { display: block; }
 form sakuga-button::part(button) { width: 100%; }
+.compose-actions { display: flex; gap: 12px; align-items: center; margin-top: 15px; }
+.compose-actions sakuga-button { margin-top: 0; }
+.compose-actions #saveStory { flex: 0 0 auto; width: auto; }
+.compose-actions #saveStory::part(button) { width: auto; }
+.compose-actions [type="submit"] { flex: 1 1 auto; min-width: 0; }
+sakuga-toast { position: fixed; left: 24px; bottom: 24px; z-index: 2147482999; }
 .status { margin: 8px 0; color: var(--error); font-size: .82rem; }
 .status:empty { display: none; }
 #conversation { padding: 0; overflow: hidden; height: min(800px, 90vh); height: min(800px, 90dvh); }
@@ -389,9 +408,7 @@ form sakuga-button::part(button) { width: 100%; }
 .thread-reply { margin-left: calc(var(--reply-level) * 13px); padding: 12px 0 3px 12px; border-top: 1px solid var(--line); border-left: 2px solid var(--violet); }
 #replyForm {
   flex: 0 0 auto;
-  max-height: 48vh;
-  max-height: 48dvh;
-  overflow-y: auto;
+  overflow: visible;
   background: var(--paper);
   border-top: 1px solid var(--stroke);
   padding: 12px 24px max(17px, env(safe-area-inset-bottom));
@@ -442,12 +459,16 @@ form sakuga-button::part(button) { width: 100%; }
   .spark { right: 8px; top: -12px; font-size: 28px; }
   .art::after { left: 23px; bottom: 4px; width: 16px; height: 2px; }
   .searchrow { gap: 7px; }
+  .compose-actions { flex-wrap: wrap; }
+  .compose-actions #saveStory { flex: 1 1 120px; width: 100%; }
+  .compose-actions #saveStory::part(button) { width: 100%; }
+  .compose-actions [type="submit"] { flex: 1 1 200px; }
   .cardfoot { gap: 5px 10px; }
   footer > span:last-child { flex-basis: 100%; }
 }
 @media (max-height: 500px) {
   #conversation > .dialoghead { padding-block: 6px; }
-  #replyForm { max-height: 55vh; max-height: 55dvh; padding-block: 7px; }
+  #replyForm { max-height: 55vh; max-height: 55dvh; overflow-y: auto; overflow-x: clip; padding-block: 7px; }
   #reply { min-height: 38px; height: 42px; }
   #replyForm .reply-context { max-height: 46px; }
   #replyForm .primary { min-height: 34px; margin-top: 6px; padding-block: 6px; }
