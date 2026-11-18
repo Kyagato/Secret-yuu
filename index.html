@@ -11,8 +11,11 @@
 </head>
 <body>
   <header>
-    <a class="logo" href="./" aria-label="Beranda R4hasiakuu"><span class="mark" aria-hidden="true">∴</span>R4hasiakuu<span class="logo-period">.</span></a>
-    <span class="anonymous"><span class="dot"></span>Kamu hadir sebagai anonim</span>
+    <a class="logo" href="./" aria-label="Beranda R4hasiakuu"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M4 3L27 15L17.5 17L22.5 26L17 29L12 20L6 26Z"/></svg>R4hasiakuu<span class="logo-period">.</span></a>
+    <div class="account-actions">
+      <button type="button" class="anonymous account-trigger" id="accountOpen" aria-haspopup="dialog" aria-controls="accountDialog">Masuk</button>
+      <button type="button" class="anonymous account-trigger" id="registerOpen" aria-haspopup="dialog" aria-controls="accountDialog">Daftar</button>
+    </div>
   </header>
   <main>
     <section class="hero" aria-labelledby="hero-title">
@@ -59,6 +62,23 @@
     <footer><span class="logo">R4hasiakuu.</span><span>Berbagi dengan empati ♡</span></footer>
   </main>
 
+  <dialog id="accountDialog" aria-labelledby="accountTitle">
+    <div class="dialoghead"><h2 id="accountTitle">Masuk</h2><button type="button" class="close" aria-label="Tutup">×</button></div>
+    <p class="privacy">Cerita dan balasanmu tetap tampil anonim.</p>
+    <div id="accountGuest">
+      <button type="button" class="share-button account-google" id="googleLogin">Lanjutkan dengan Google</button>
+      <form id="accountForm">
+        <label for="loginEmail">Email</label>
+        <input id="loginEmail" type="email" required autocomplete="email">
+        <label for="loginPassword">Kata sandi</label>
+        <input id="loginPassword" type="password" required autocomplete="current-password">
+        <button class="primary" id="authSubmit" type="submit">Masuk dengan email</button>
+      </form>
+      <button class="textbtn account-switch" id="accountSwitch" type="button">Belum punya akun? Daftar</button>
+    </div>
+    <div id="accountMember" hidden><p id="memberEmail"></p><button class="share-button" id="signOut" type="button">Keluar</button></div>
+    <p id="accountStatus" class="privacy" role="status"></p>
+  </dialog>
   <dialog id="compose" aria-labelledby="compose-title">
     <div class="dialoghead"><h2 id="compose-title">Mulai dari ceritamu.</h2><button class="close" type="button" aria-label="Tutup">×</button></div>
     <p class="privacy">Tidak perlu nama. Ceritamu akan terlihat oleh pengguna lain, dan semua balasan tampil anonim.</p>
@@ -96,6 +116,7 @@
   <script src="./toggle.js"></script>
   <script src="./toast.js"></script>
   <script src="./motion.js"></script>
+  <script src="./account.js"></script>
 <script>
 const $=s=>document.querySelector(s);let rooms=[],current=null,timer;
 function syncSakugaCanvas(){

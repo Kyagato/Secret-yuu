@@ -90,18 +90,15 @@ header {
   line-height: 1.15;
 }
 .mark {
-  display: grid;
-  place-items: center;
   width: 31px;
-  height: 29px;
-  margin-right: 10px;
-  border: 2px solid var(--stroke);
-  border-radius: 5px 7px 5px 2px;
-  box-shadow: 2px 2px var(--shadow);
-  background: var(--pink);
-  color: var(--on-pink);
-  font: 700 21px/1 var(--display);
-  transform: rotate(-6deg);
+  height: 31px;
+  flex: none;
+  margin-right: 8px;
+  fill: var(--pink);
+  stroke: var(--stroke);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  filter: drop-shadow(1px 2px 0 var(--shadow));
 }
 .logo-period { color: var(--spark); }
 .anonymous {
@@ -473,3 +470,10 @@ sakuga-toast { position: fixed; left: 24px; bottom: 24px; z-index: 2147482999; }
   #replyForm .reply-context { max-height: 46px; }
   #replyForm .primary { min-height: 34px; margin-top: 6px; padding-block: 6px; }
 }
+.account-trigger { cursor: pointer; font-family: inherit; }
+#accountDialog { max-width: 420px; }
+.account-google { width: 100%; margin: 16px 0 4px; }
+.account-switch { margin-top: 12px; }
+#memberEmail, #accountStatus { overflow-wrap: anywhere; }
+.account-actions { display: flex; align-items: center; gap: 6px; }
+#registerOpen { background: var(--pink); color: var(--on-pink); border-color: var(--stroke); }
