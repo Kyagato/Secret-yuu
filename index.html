@@ -12,11 +12,7 @@
 <body>
   <header>
     <a class="logo" href="./" aria-label="Beranda R4hasiakuu"><span class="mark" aria-hidden="true">∴</span>R4hasiakuu<span class="logo-period">.</span></a>
-    <nav class="nav" aria-label="Navigasi utama">
-      <a href="#explore">Jelajahi ruang</a>
-      <a href="#guidelines">Tentang R4hasiakuu</a>
-      <span class="anonymous"><span class="dot"></span>Kamu hadir sebagai anonim</span>
-    </nav>
+    <span class="anonymous"><span class="dot"></span>Kamu hadir sebagai anonim</span>
   </header>
   <main>
     <section class="hero" aria-labelledby="hero-title">
@@ -34,8 +30,12 @@
           <sakuga-button id="new">+ Mulai cerita</sakuga-button>
         </div>
         <div class="searchrow">
-          <input class="search" id="search" type="search" aria-label="Cari percakapan" placeholder="Cari judul atau isi cerita…">
-          <select class="sort" id="sort" aria-label="Urutkan percakapan"><option value="new">Terbaru ↓</option><option value="popular">Paling ramai</option></select>
+          <sakuga-input class="search" id="search" type="search" label="Cari percakapan" placeholder="Cari judul atau isi cerita…"></sakuga-input>
+          <div class="sort-toggle">
+            <span class="sort-label active" id="sortLatest">Terbaru</span>
+            <sakuga-toggle id="sort" label="Urutkan percakapan: Terbaru atau Paling ramai"></sakuga-toggle>
+            <span class="sort-label" id="sortPopular">Paling ramai</span>
+          </div>
         </div>
         <div id="feed" aria-live="polite"><div class="empty">Memuat percakapan…</div></div>
       </section>
@@ -64,7 +64,7 @@
     <p class="privacy">Tidak perlu nama. Ceritamu akan terlihat oleh pengguna lain, dan semua balasan tampil anonim.</p>
     <form id="createForm">
       <label for="title">Apa yang ingin kamu bicarakan?</label>
-      <input id="title" required minlength="5" maxlength="120" placeholder="Beri judul untuk ceritamu">
+      <sakuga-input id="title" name="title" label="Apa yang ingin kamu bicarakan?" placeholder="Beri judul untuk ceritamu"></sakuga-input>
       <label for="body">Ceritakan di sini</label>
       <textarea id="body" required minlength="10" maxlength="2000" placeholder="Tidak harus rapi. Tulis saja yang kamu rasakan…"></textarea>
       <p class="status" id="createError" role="alert"></p>
@@ -88,6 +88,8 @@
     </form>
   </dialog>
   <script src="./button.js"></script>
+  <script src="./input.js"></script>
+  <script src="./toggle.js"></script>
   <script src="./motion.js"></script>
 <script>
 const $=s=>document.querySelector(s);let rooms=[],current=null,timer;
@@ -109,9 +111,12 @@ syncSakugaCanvas();
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time=t=>{let m=Math.max(0,Math.floor((Date.now()-t)/60000));return m<1?'Baru saja':m<60?m+' menit lalu':m<1440?Math.floor(m/60)+' jam lalu':Math.floor(m/1440)+' hari lalu'};
 async function api(path,options){const r=await fetch('/api/'+path,options);const b=await r.json();if(!r.ok)throw Error(b.error||'Ada kendala. Coba lagi.');return b}const post=b=>({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
-function render(){let items=rooms.filter(r=>(r.title+' '+r.body).toLowerCase().includes($('#search').value.toLowerCase()));if($('#sort').value==='popular')items.sort((a,b)=>b.replies-a.replies);$('#feed').innerHTML=items.length?items.map(r=>`<article class="card"><div class="cardtop"><span class="avatar">✳</span><b class="card-author">Seseorang</b><span>· ${time(r.created)}</span><span class="label">${esc(r.category)}</span></div><h3><button data-room="${r.id}">${esc(r.title)}</button></h3><p>${esc(r.body.slice(0,180))}${r.body.length>180?'…':''}</p><div class="cardfoot"><span>♧ &nbsp; ${r.replies} balasan &nbsp; · &nbsp; Semua anonim</span><button class="textbtn" data-room="${r.id}">Ikut percakapan ↗</button></div></article>`).join(''):`<div class="empty"><div class="empty-icon" aria-hidden="true">☁</div><h3>${rooms.length?'Belum ada cerita yang cocok':'Ruang ini menunggu cerita pertamamu.'}</h3><p>${rooms.length?'Coba kata pencarian lain.':'Ada yang ingin kamu ceritakan hari ini?'}</p></div>`}
+function render(){let items=rooms.filter(r=>(r.title+' '+r.body).toLowerCase().includes($('#search').value.toLowerCase()));if($('#sort').checked)items.sort((a,b)=>b.replies-a.replies);$('#feed').innerHTML=items.length?items.map(r=>`<article class="card"><div class="cardtop"><span class="avatar">✳</span><b class="card-author">Seseorang</b><span>· ${time(r.created)}</span><span class="label">${esc(r.category)}</span></div><h3><button data-room="${r.id}">${esc(r.title)}</button></h3><p>${esc(r.body.slice(0,180))}${r.body.length>180?'…':''}</p><div class="cardfoot"><span>♧ &nbsp; ${r.replies} balasan &nbsp; · &nbsp; Semua anonim</span><button class="textbtn" data-room="${r.id}">Ikut percakapan ↗</button></div></article>`).join(''):`<div class="empty"><div class="empty-icon" aria-hidden="true">☁</div><h3>${rooms.length?'Belum ada cerita yang cocok':'Ruang ini menunggu cerita pertamamu.'}</h3><p>${rooms.length?'Coba kata pencarian lain.':'Ada yang ingin kamu ceritakan hari ini?'}</p></div>`}
 async function load(){try{rooms=await api('rooms');render()}catch(e){$('#feed').innerHTML='<div class="empty"><h3>Ruang belum bisa dimuat</h3><p>'+esc(e.message)+'</p><button class="textbtn" id="retry">Coba lagi ↻</button></div>';$('#retry').onclick=load}}
-$('#search').oninput=render;$('#sort').onchange=render;
+function updateSortLabels(){const popular=$('#sort').checked;$('#sortLatest').classList.toggle('active',!popular);$('#sortPopular').classList.toggle('active',popular);}
+$('#search').oninput=render;$('#search').onchange=render;
+$('#sort').addEventListener('change',()=>{updateSortLabels();render();});
+updateSortLabels();
 let composeTimer = 0;
 $('#new').addEventListener('click', () => {
   clearTimeout(composeTimer);
@@ -126,17 +131,28 @@ $('#new').addEventListener('click', () => {
   }, delay);
 });
 document.querySelectorAll('.close').forEach(b=>b.onclick=()=>b.closest('dialog').close());
+$('#title').addEventListener('input', () => {
+  if ($('#createError').textContent) $('#createError').textContent = '';
+});
 $('#createForm').onsubmit = async event => {
   event.preventDefault();
   const form = event.currentTarget;
   const button = event.submitter || form.querySelector('[type="submit"]');
+  const titleField = $('#title');
+  const title = titleField.value;
+  if (title.trim().length < 5 || title.length > 120) {
+    $('#createError').textContent = 'Judul perlu berisi 5–120 karakter.';
+    titleField.focus();
+    return;
+  }
   if (button.disabled) return;
   button.disabled = true;
   $('#createError').textContent = '';
   try {
-    const room = await api('rooms', post({ title: $('#title').value, body: $('#body').value }));
+    const room = await api('rooms', post({ title, body: $('#body').value }));
     button.done?.();
     form.reset();
+    titleField.value = '';
     const compose = $('#compose');
     if (!compose.open) { await load(); button.disabled = false; return; }
     const delay = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420;
