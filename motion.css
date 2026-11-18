@@ -1,0 +1,107 @@
+button:is(.primary, .share-button, .textbtn, .close, [data-room]) {
+  position: relative;
+}
+
+button.manga-primary { isolation: isolate; }
+button.primary > .manga-label {
+  display: inline-block;
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  pointer-events: none;
+}
+
+.manga-face,
+.manga-burst,
+.manga-burst > i {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+.manga-face { z-index: -1; visibility: hidden; }
+.manga-burst { inset: 0; z-index: 1; }
+.manga-burst > i { opacity: 0; }
+
+.manga-receipt {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-inline: auto 10px;
+  padding: 4px 8px;
+  background: var(--paper, #fffdfa);
+  color: var(--ink, #302443);
+  border: 1px solid var(--stroke, #302443);
+  border-radius: 5px;
+  box-shadow: 2px 2px 0 var(--lavender, #ded3f4);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.manga-receipt:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  button.primary.manga-primary:is(:active:not(:disabled), .manga-spring) {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+  .manga-primary:is(:active:not(:disabled), .manga-spring) > .manga-face {
+    visibility: visible;
+  }
+  .manga-primary > :is(.manga-face, .manga-label) { transform-origin: center 70%; }
+  .manga-primary:active:not(:disabled) > :is(.manga-face, .manga-label) {
+    transform: translateY(2px) scale(1.025, .86);
+  }
+  .manga-primary.manga-spring > :is(.manga-face, .manga-label) {
+    animation: manga-button-spring 390ms ease-out both;
+  }
+  .manga-burst > i {
+    --turn: -52deg;
+    --reach: 8px;
+    width: 13px;
+    height: 4px;
+    right: 6px;
+    top: 3px;
+    background: var(--stroke, #302443);
+    clip-path: polygon(0 56%, 100% 0, 75% 100%);
+    transform-origin: 0 50%;
+    animation: manga-ink-stroke 400ms ease-out both;
+  }
+  .manga-burst > i:nth-child(2) { --turn: -13deg; right: -1px; top: 10px; background: var(--spark, #d14685); }
+  .manga-burst > i:nth-child(3) { --turn: -85deg; right: 15px; top: 2px; width: 8px; }
+  .manga-burst > i:nth-child(4) { --turn: 135deg; left: 9px; top: auto; bottom: 3px; }
+  .manga-burst > i:nth-child(5) { --turn: 178deg; left: 2px; top: auto; bottom: 10px; background: var(--spark, #d14685); }
+  .manga-burst > i:nth-child(6) { --turn: 102deg; left: 16px; top: auto; bottom: 2px; width: 8px; }
+  .manga-burst-small > i { --reach: 4px; width: 7px; height: 2px; animation-duration: 250ms; }
+  .manga-burst-small > i:nth-child(3) { width: 5px; }
+  .manga-receipt:not(:empty) { animation: manga-receipt-appear 220ms ease-out; }
+}
+
+@keyframes manga-button-spring {
+  0% { transform: translateY(2px) scale(1.025, .86); }
+  34% { transform: translateY(-1px) scale(.985, 1.09); }
+  64% { transform: scale(1.008, .968); }
+  83% { transform: scale(.998, 1.012); }
+  100% { transform: none; }
+}
+@keyframes manga-ink-stroke {
+  0% { opacity: 0; transform: rotate(var(--turn)) scale(.25); }
+  20% { opacity: 1; transform: rotate(var(--turn)) translateX(2px) scale(1.1); }
+  64% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--turn)) translateX(var(--reach)) scale(.55); }
+}
+@keyframes manga-receipt-appear {
+  0% { opacity: .4; transform: translateX(-5px); }
+  60% { opacity: 1; transform: translateX(1px); }
+  100% { transform: none; }
+}
