@@ -13,8 +13,8 @@
   <header>
     <a class="logo" href="./" aria-label="Beranda R4hasiakuu"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M4 3L27 15L17.5 17L22.5 26L17 29L12 20L6 26Z"/></svg>R4hasiakuu<span class="logo-period">.</span></a>
     <div class="account-actions">
-      <button type="button" class="anonymous account-trigger" id="accountOpen" aria-haspopup="dialog" aria-controls="accountDialog">Masuk</button>
-      <button type="button" class="anonymous account-trigger" id="registerOpen" aria-haspopup="dialog" aria-controls="accountDialog">Daftar</button>
+      <sakuga-button class="account-trigger" id="accountOpen" aria-haspopup="dialog" aria-controls="accountDialog">Masuk</sakuga-button>
+      <sakuga-button class="account-trigger" id="registerOpen" aria-haspopup="dialog" aria-controls="accountDialog">Daftar</sakuga-button>
     </div>
   </header>
   <main>
@@ -64,19 +64,24 @@
 
   <dialog id="accountDialog" aria-labelledby="accountTitle">
     <div class="dialoghead"><h2 id="accountTitle">Masuk</h2><button type="button" class="close" aria-label="Tutup">×</button></div>
-    <p class="privacy">Cerita dan balasanmu tetap tampil anonim.</p>
     <div id="accountGuest">
+      <p class="privacy">Login jika kamu sudah buat akun, Daftar jika belum punya. Cerita dan balasanmu tetap tampil anonim.</p>
+      <div class="account-modes" role="group" aria-label="Pilih formulir akun">
+        <button id="modeLogin" type="button" aria-pressed="true">Masuk</button>
+        <button id="modeRegister" type="button" aria-pressed="false">Daftar</button>
+      </div>
+      <div class="account-slide-window"><div id="accountPanel">
       <button type="button" class="share-button account-google" id="googleLogin">Lanjutkan dengan Google</button>
-      <form id="accountForm">
+      <form id="accountForm" method="post">
         <label for="loginEmail">Email</label>
-        <input id="loginEmail" type="email" required autocomplete="email">
+        <sakuga-input id="loginEmail" name="email" label="Email" type="email" placeholder="nama@contoh.com" autocomplete="email"></sakuga-input>
         <label for="loginPassword">Kata sandi</label>
-        <input id="loginPassword" type="password" required autocomplete="current-password">
+        <sakuga-input id="loginPassword" name="password" label="Kata sandi" type="password" placeholder="Masukkan kata sandi" autocomplete="current-password"></sakuga-input>
         <button class="primary" id="authSubmit" type="submit">Masuk dengan email</button>
       </form>
-      <button class="textbtn account-switch" id="accountSwitch" type="button">Belum punya akun? Daftar</button>
+      </div></div>
     </div>
-    <div id="accountMember" hidden><p id="memberEmail"></p><button class="share-button" id="signOut" type="button">Keluar</button></div>
+    <div id="accountMember" hidden><p class="privacy">Cerita dan balasanmu tetap tampil anonim.</p><p id="memberEmail"></p><button class="share-button" id="signOut" type="button">Keluar</button></div>
     <p id="accountStatus" class="privacy" role="status"></p>
   </dialog>
   <dialog id="compose" aria-labelledby="compose-title">
@@ -128,6 +133,7 @@ function syncSakugaCanvas(){
   if (canvas && canvas.parentElement !== target) target.appendChild(canvas);
 }
 new MutationObserver(syncSakugaCanvas).observe(document.body, { childList: true });
+new MutationObserver(syncSakugaCanvas).observe(document.querySelector('#accountDialog'), { attributes: true, attributeFilter: ['open'] });
 document.addEventListener('pointerdown', syncSakugaCanvas, true);
 document.addEventListener('close', () => setTimeout(syncSakugaCanvas, 0), true);
 window.SakugaFX?.ticks?.(-100, -100, { n: 0, life: 0 });

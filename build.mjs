@@ -10,7 +10,10 @@ if ((url || key) && (!/^https:\/\/[a-zA-Z0-9.-]+\/?$/.test(url) || !/^sb_publish
 const accountBundle = await build({
   entryPoints: ['account.js'], bundle: true, platform: 'browser', format: 'iife',
   minify: true, write: false,
-  define: { AUTH_URL: JSON.stringify(url), AUTH_PUBLIC_KEY: JSON.stringify(key) }
+  define: {
+    AUTH_URL: JSON.stringify(url), AUTH_PUBLIC_KEY: JSON.stringify(key),
+    LOCAL_DEMO: JSON.stringify(!url && process.argv.includes('--local-demo'))
+  }
 });
 
 // The worker serves a single page. Embed the local styles and effects for deployment.

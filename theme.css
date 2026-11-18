@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 /* The lavender story panel, ink outline and pink action follow the selected mockup. */
 :root {
@@ -28,7 +28,7 @@
   --sk-sh: 4px 5px 0 var(--shadow);
   --sk-btn-line: var(--stroke);
   --sk-btn-sh: var(--sk-sh);
-  --display: 'Manrope', 'DM Sans', system-ui, sans-serif;
+  --display: 'Bricolage Grotesque', 'DM Sans', system-ui, sans-serif;
   font-family: 'DM Sans', system-ui, sans-serif;
 }
 
@@ -101,15 +101,18 @@ header {
   filter: drop-shadow(1px 2px 0 var(--shadow));
 }
 .logo-period { color: var(--spark); }
-.anonymous {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.account-trigger {
+  --sk-card: var(--soft);
+  --sk-ink: var(--muted);
+  --sk-btn-line: var(--line);
+  --sk-bw: 1px;
+  --sk-r: 100px;
+  --sk-btn-sh: none;
+  font-family: inherit;
+}
+.account-trigger::part(button) {
   padding: 6px 12px;
-  border: 1px solid var(--line);
-  border-radius: 100px;
-  background: var(--soft);
-  color: var(--muted);
+  font: inherit;
   font-size: .76rem;
 }
 .dot { display: inline-block; flex: 0 0 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--spark); }
@@ -294,7 +297,7 @@ sakuga-input.search {
 }
 .label { padding: 3px 8px; border-radius: 4px; background: var(--soft); color: var(--muted); font-size: .68rem; }
 .cardtop .label { margin-left: auto; }
-.card h3 { margin: 13px 0 7px; }
+.card h3 { margin: 13px 0 7px; font-weight: 700; }
 .card h3 button { border: 0; padding: 0; background: transparent; text-align: left; font: inherit; overflow-wrap: anywhere; }
 .card h3 button:hover, .textbtn:hover { text-decoration: underline; text-underline-offset: 3px; }
 .card p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -426,7 +429,7 @@ sakuga-toast { position: fixed; left: 24px; bottom: 24px; z-index: 2147482999; }
 }
 @media (max-width: 700px) {
   header { min-height: 64px; padding: 10px 18px; gap: 10px; }
-  .anonymous { padding: 5px 9px; max-width: 145px; font-size: .7rem; line-height: 1.35; }
+  .account-trigger::part(button) { padding: 5px 9px; max-width: 145px; font-size: .7rem; line-height: 1.35; }
   main { padding: 22px 16px 0; }
   .hero { min-height: 235px; }
   .hero p { font-size: .85rem; }
@@ -470,10 +473,45 @@ sakuga-toast { position: fixed; left: 24px; bottom: 24px; z-index: 2147482999; }
   #replyForm .reply-context { max-height: 46px; }
   #replyForm .primary { min-height: 34px; margin-top: 6px; padding-block: 6px; }
 }
-.account-trigger { cursor: pointer; font-family: inherit; }
+html:has(#accountDialog[open]), body:has(#accountDialog[open]) { overflow-x: clip; }
+body:has(#accountDialog[open]) { position: relative; }
 #accountDialog { max-width: 420px; }
 .account-google { width: 100%; margin: 16px 0 4px; }
-.account-switch { margin-top: 12px; }
+.account-modes {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 16px;
+  padding: 3px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.account-modes::before {
+  content: '';
+  position: absolute;
+  inset: 3px auto 3px 3px;
+  width: calc(50% - 3px);
+  border-radius: 6px;
+  background: var(--pink);
+  z-index: -1;
+}
+.is-registering .account-modes::before { transform: translateX(100%); }
+.account-modes button {
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  border-radius: 6px;
+  padding: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.account-modes button[aria-pressed="true"] { color: var(--on-pink); }
+.account-slide-window { overflow: clip; overflow-clip-margin: 7px; }
+@media (prefers-reduced-motion: no-preference) {
+  .account-modes::before { transition: transform 320ms cubic-bezier(.22,.8,.25,1); }
+}
 #memberEmail, #accountStatus { overflow-wrap: anywhere; }
 .account-actions { display: flex; align-items: center; gap: 6px; }
-#registerOpen { background: var(--pink); color: var(--on-pink); border-color: var(--stroke); }
+#registerOpen { --sk-card: var(--pink); --sk-ink: var(--on-pink); --sk-btn-line: var(--stroke); }
