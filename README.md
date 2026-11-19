@@ -2,7 +2,7 @@
 
 Ruang percakapan dengan balasan tanpa nama. HTML/CSS/JavaScript dan API Cloudflare Worker dengan database D1.
 
-Jalankan dengan Node.js 24: `node build.mjs`, lalu `node dev.mjs`. Buka http://localhost:3000. Data lokal tersimpan di local.sqlite.
+Jalankan `npm start` dengan Node.js 24, lalu buka http://localhost:3000. Preview otomatis dimuat ulang setiap kali perubahan tampilan atau API disimpan. Data lokal tersimpan di local.sqlite.
 
 Verifikasi alur penyimpanan dan balasan: `node test.mjs`.
 
