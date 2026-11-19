@@ -1,4 +1,19 @@
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
+async function digest(value) {
+ const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+ return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function roomOwner(request, db) {
+ const cookieName = new URL(request.url).protocol === 'https:' ? '__Host-r4session=' : 'r4session=';
+ const token = (request.headers.get('cookie') || '').split(/;\s*/).find(part => part.startsWith(cookieName))?.slice(cookieName.length);
+ if (token && /^[0-9a-f]{64}$/.test(token)) {
+   const session = await db.prepare('SELECT email FROM account_sessions WHERE token_hash=? AND expires_at>?').bind(await digest(token), Date.now()).first();
+   if (session) return 'account:' + await digest(session.email);
+ }
+ const guest = request.headers.get('X-Guest-Key');
+ return guest && /^[0-9a-f]{64}$/.test(guest) ? 'guest:' + await digest(guest) : null;
+}
 export default {async fetch(request,env){
  const u=new URL(request.url);
  if(!u.pathname.startsWith('/api/')) return new Response(HTML,{headers:{'Content-Type':'text/html; charset=utf-8','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});
@@ -6,16 +21,22 @@ export default {async fetch(request,env){
  if(request.method==='POST' && request.headers.get('Origin')!==u.origin) return json({error:'Permintaan tidak diizinkan.'},403);
  const db=env.DB;
  if(!db)return json({error:'Penyimpanan belum terhubung. Coba lagi nanti.'},503);
- if(u.pathname==='/api/rooms' && request.method==='GET')return json((await db.prepare('SELECT r.*, (SELECT COUNT(*) FROM messages m WHERE m.room=r.id) replies FROM rooms r ORDER BY created DESC LIMIT 100').all()).results);
+ if(u.pathname==='/api/rooms' && request.method==='GET'){
+ const owner=await roomOwner(request,db);
+ if(!owner)return json([]);
+ return json((await db.prepare('SELECT r.id,r.title,r.body,r.category,r.created,(SELECT COUNT(*) FROM messages m WHERE m.room=r.id) replies FROM rooms r WHERE r.owner_key=? ORDER BY r.created DESC LIMIT 100').bind(owner).all()).results);
+ }
  if(u.pathname==='/api/rooms' && request.method==='POST'){
+ const owner=await roomOwner(request,db);
+ if(!owner)return json({error:'Muat ulang halaman untuk membuat cerita.'},400);
  const b=await request.json();
  const category=b.category??'Random';
  if(typeof b.title!=='string'||typeof b.body!=='string'||b.title.trim().length<5||b.title.length>120||b.body.trim().length<10||b.body.length>2000||!['Cerita sehari-hari','Isi hati','Hubungan','Kampus & karier','Random'].includes(category))return json({error:'Periksa judul dan ceritamu.'},400);
- const id=crypto.randomUUID(); await db.prepare('INSERT INTO rooms VALUES (?,?,?,?,?)').bind(id,b.title.trim(),b.body.trim(),category,Date.now()).run();return json({id},201);
+ const id=crypto.randomUUID(); await db.prepare('INSERT INTO rooms(id,title,body,category,created,owner_key) VALUES (?,?,?,?,?,?)').bind(id,b.title.trim(),b.body.trim(),category,Date.now(),owner).run();return json({id},201);
  }
  const match=u.pathname.match(/^\/api\/rooms\/([a-z0-9-]+)\/messages$/);
  if(match){
- const room=await db.prepare('SELECT * FROM rooms WHERE id=?').bind(match[1]).first();if(!room)return json({error:'Percakapan tidak ditemukan.'},404);
+ const room=await db.prepare('SELECT id,title,body,category,created FROM rooms WHERE id=?').bind(match[1]).first();if(!room)return json({error:'Percakapan tidak ditemukan.'},404);
  if(request.method==='GET')return json({room,messages:(await db.prepare('SELECT m.id,m.body,m.created,m.parent_id,p.body AS parent_body FROM messages m LEFT JOIN messages p ON p.id=m.parent_id AND p.room=m.room WHERE m.room=? ORDER BY m.created, m.rowid LIMIT 500').bind(match[1]).all()).results});
  if(request.method==='POST'){
  const b=await request.json();

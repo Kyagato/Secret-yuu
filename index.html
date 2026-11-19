@@ -29,7 +29,7 @@
     <div class="layout">
       <section id="explore" aria-labelledby="explore-title">
         <div class="sectiontop">
-          <div><h2 id="explore-title">Temukan percakapanmu</h2><p class="sub">Ada banyak cerita. Mungkin salah satunya dekat denganmu.</p></div>
+          <div><h2 id="explore-title">Percakapan saya</h2><p class="sub">Bagikan tautan ceritamu agar orang lain bisa membalas.</p></div>
           <sakuga-button id="new">+ Mulai cerita</sakuga-button>
         </div>
         <div class="searchrow">
@@ -50,7 +50,7 @@
           <div class="rule"><span class="symbol" aria-hidden="true">♧</span><div><b>Identitas tetap milikmu</b>Nama dan profil tidak ditampilkan.</div></div>
           <div class="rule"><span class="symbol" aria-hidden="true">♡</span><div><b>Berbeda, tetap menghargai</b>Balas dengan empati, bukan menghakimi.</div></div>
           <div class="rule"><span class="symbol" aria-hidden="true">☷</span><div><b>Cerita secukupnya</b>Hindari membagikan data pribadi.</div></div>
-          <p class="small">Percakapan dapat dibaca pengguna lain. Anonim berarti identitas tidak ditampilkan, bukan jaminan anonimitas jaringan.</p>
+          <p class="small">Siapa pun yang memiliki tautan dapat membaca dan membalas. Anonim berarti identitas tidak ditampilkan, bukan jaminan anonimitas jaringan.</p>
         </div>
         <div class="sidecard reminder">
           <div class="eyebrow motto-label">Pengingat kecil hari ini</div>
@@ -85,7 +85,7 @@
   </dialog>
   <dialog id="compose" aria-labelledby="compose-title">
     <div class="dialoghead"><h2 id="compose-title">Mulai dari ceritamu.</h2><button class="close" type="button" aria-label="Tutup">×</button></div>
-    <p class="privacy">Tidak perlu nama. Ceritamu akan terlihat oleh pengguna lain, dan semua balasan tampil anonim.</p>
+    <p class="privacy">Tidak perlu nama. Bagikan tautan agar orang lain bisa membaca dan membalas secara anonim.</p>
     <form id="createForm">
       <label for="title">Apa yang ingin kamu bicarakan?</label>
       <sakuga-input id="title" name="title" label="Apa yang ingin kamu bicarakan?" placeholder="Beri judul untuk ceritamu"></sakuga-input>
@@ -139,9 +139,23 @@ window.SakugaFX?.ticks?.(-100, -100, { n: 0, life: 0 });
 syncSakugaCanvas();
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time=t=>{let m=Math.max(0,Math.floor((Date.now()-t)/60000));return m<1?'Baru saja':m<60?m+' menit lalu':m<1440?Math.floor(m/60)+' jam lalu':Math.floor(m/1440)+' hari lalu'};
-async function api(path,options){const r=await fetch('/api/'+path,options);const b=await r.json();if(!r.ok)throw Error(b.error||'Ada kendala. Coba lagi.');return b}const post=b=>({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
-function render(){let items=rooms.filter(r=>(r.title+' '+r.body).toLowerCase().includes($('#search').value.toLowerCase()));if($('#sort').checked)items.sort((a,b)=>b.replies-a.replies);$('#feed').innerHTML=items.length?items.map(r=>`<article class="card"><div class="cardtop"><span class="avatar">✳</span><b class="card-author">Seseorang</b><span>· ${time(r.created)}</span><span class="label">${esc(r.category)}</span></div><h3><button data-room="${r.id}">${esc(r.title)}</button></h3><p>${esc(r.body.slice(0,180))}${r.body.length>180?'…':''}</p><div class="cardfoot"><span>♧ &nbsp; ${r.replies} balasan &nbsp; · &nbsp; Semua anonim</span><button class="textbtn" data-room="${r.id}">Ikut percakapan ↗</button></div></article>`).join(''):`<div class="empty"><div class="empty-icon" aria-hidden="true">☁</div><h3>${rooms.length?'Belum ada cerita yang cocok':'Ruang ini menunggu cerita pertamamu.'}</h3><p>${rooms.length?'Coba kata pencarian lain.':'Ada yang ingin kamu ceritakan hari ini?'}</p></div>`}
-async function load(){try{rooms=await api('rooms');render()}catch(e){$('#feed').innerHTML='<div class="empty"><h3>Ruang belum bisa dimuat</h3><p>'+esc(e.message)+'</p><button class="textbtn" id="retry">Coba lagi ↻</button></div>';$('#retry').onclick=load}}
+function guestKey(){
+ const name='r4-private-feed';
+ let key=localStorage.getItem(name);
+ if(!key){
+   const bytes=crypto.getRandomValues(new Uint8Array(32));
+   key=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+   localStorage.setItem(name,key);
+ }
+ return key;
+}
+async function api(path,options={}){
+ const headers=new Headers(options.headers);
+ if(path==='rooms')headers.set('X-Guest-Key',guestKey());
+ const r=await fetch('/api/'+path,{...options,headers,cache:'no-store'});const b=await r.json();if(!r.ok)throw Error(b.error||'Ada kendala. Coba lagi.');return b}const post=b=>({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+function render(){let items=rooms.filter(r=>(r.title+' '+r.body).toLowerCase().includes($('#search').value.toLowerCase()));if($('#sort').checked)items.sort((a,b)=>b.replies-a.replies);$('#feed').innerHTML=items.length?items.map(r=>`<article class="card"><div class="cardtop"><span class="avatar">✳</span><b class="card-author">Kamu</b><span>· ${time(r.created)}</span><span class="label">${esc(r.category)}</span></div><h3><button data-room="${r.id}">${esc(r.title)}</button></h3><p>${esc(r.body.slice(0,180))}${r.body.length>180?'…':''}</p><div class="cardfoot"><span>♧ &nbsp; ${r.replies} balasan &nbsp; · &nbsp; Semua anonim</span><button class="textbtn" data-room="${r.id}">Ikut percakapan ↗</button></div></article>`).join(''):`<div class="empty"><div class="empty-icon" aria-hidden="true">☁</div><h3>${rooms.length?'Belum ada cerita yang cocok':'Ruang ini menunggu cerita pertamamu.'}</h3><p>${rooms.length?'Coba kata pencarian lain.':'Ada yang ingin kamu ceritakan hari ini?'}</p></div>`}
+let feedVersion=0;
+async function load(){const version=++feedVersion;try{const items=await api('rooms');if(version!==feedVersion)return;rooms=items;render()}catch(e){if(version!==feedVersion)return;rooms=[];$('#feed').innerHTML='<div class="empty"><h3>Ruang belum bisa dimuat</h3><p>'+esc(e.message)+'</p><button class="textbtn" id="retry">Coba lagi ↻</button></div>';$('#retry').onclick=load}}
 function updateSortLabels(pop = false){
   const popular = $('#sort').checked;
   const latestEl = $('#sortLatest'), popularEl = $('#sortPopular');
@@ -345,6 +359,10 @@ $('#copyRoomLink').onclick=async()=>{
   $('#shareUrl').focus();$('#shareUrl').select();
  }finally{if(current===id&&roomVisit===visit)button.disabled=false;}
 };
+function reloadPrivateFeed(){rooms=[];render();load()}
+window.addEventListener('account-changed',reloadPrivateFeed);
+window.addEventListener('pageshow',e=>{if(e.persisted)reloadPrivateFeed()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)reloadPrivateFeed()});
 load();
 const sharedRoom=new URL(location.href).searchParams.get('cerita');
 if(sharedRoom&&/^[a-z0-9-]{1,100}$/.test(sharedRoom))openRoom(sharedRoom);

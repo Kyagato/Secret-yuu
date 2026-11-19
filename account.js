@@ -63,6 +63,7 @@ async function accountRequest(action, body) {
     throw new Error(data?.error || 'Layanan akun belum tersedia.');
   }
   user = data.user;
+  if (action !== 'session') window.dispatchEvent(new Event('account-changed'));
 }
 let openTimer;
 function openAccount(isRegistration) {
