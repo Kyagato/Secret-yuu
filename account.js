@@ -65,6 +65,25 @@ async function accountRequest(action, body) {
   user = data.user;
   if (action !== 'session') window.dispatchEvent(new Event('account-changed'));
 }
+let afterStoryLogin;
+let checkingStorySession = false;
+window.requireStoryAccount = async function(onReady) {
+  if (checkingStorySession) return;
+  checkingStorySession = true;
+  try {
+    await initialSession;
+    await accountRequest('session');
+    renderAccount();
+    if (user) { onReady(); return; }
+    afterStoryLogin = onReady;
+    openAccount(false);
+    notice.textContent = 'Masuk atau pilih Daftar untuk membuat cerita.';
+  } catch {
+    byId('toast').show('Sesi belum bisa diperiksa. Coba lagi sebentar.');
+  } finally {
+    checkingStorySession = false;
+  }
+};
 let openTimer;
 function openAccount(isRegistration) {
   registering = isRegistration;
@@ -76,7 +95,7 @@ function openAccount(isRegistration) {
 }
 byId('accountOpen').onclick = () => openAccount(false);
 byId('registerOpen').onclick = () => openAccount(true);
-dialog.addEventListener('close', () => { password.value = ''; });
+dialog.addEventListener('close', () => { password.value = ''; afterStoryLogin = null; });
 function switchMode(next) {
   if (pending || registering === next) return;
   registering = next;
@@ -100,6 +119,12 @@ form.onsubmit = event => {
   perform(async () => {
     await accountRequest(registering ? 'register' : 'login', { email: email.value, password: password.value });
     password.value = '';
+    if (afterStoryLogin && dialog.open) {
+      const resume = afterStoryLogin;
+      afterStoryLogin = null;
+      dialog.close();
+      resume();
+    }
     return registering ? 'Akun berhasil dibuat.' : 'Kamu sudah masuk.';
   });
 };
@@ -111,7 +136,7 @@ byId('signOut').onclick = () => perform(async () => {
 });
 pending = true;
 renderAccount();
-accountRequest('session').catch(() => {}).finally(() => {
+const initialSession = accountRequest('session').catch(() => {}).finally(() => {
   pending = false;
   renderAccount();
 });

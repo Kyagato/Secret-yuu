@@ -151,8 +151,8 @@ function guestKey(){
 }
 async function api(path,options={}){
  const headers=new Headers(options.headers);
- if(path==='rooms')headers.set('X-Guest-Key',guestKey());
- const r=await fetch('/api/'+path,{...options,headers,cache:'no-store'});const b=await r.json();if(!r.ok)throw Error(b.error||'Ada kendala. Coba lagi.');return b}const post=b=>({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+ if(path==='rooms' && !options.method)headers.set('X-Guest-Key',guestKey());
+ const r=await fetch('/api/'+path,{...options,headers,cache:'no-store'});const b=await r.json();if(!r.ok)throw Object.assign(new Error(b.error||'Ada kendala. Coba lagi.'),{status:r.status});return b}const post=b=>({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
 function render(){let items=rooms.filter(r=>(r.title+' '+r.body).toLowerCase().includes($('#search').value.toLowerCase()));if($('#sort').checked)items.sort((a,b)=>b.replies-a.replies);$('#feed').innerHTML=items.length?items.map(r=>`<article class="card"><div class="cardtop"><span class="avatar">✳</span><b class="card-author">Kamu</b><span>· ${time(r.created)}</span><span class="label">${esc(r.category)}</span></div><h3><button data-room="${r.id}">${esc(r.title)}</button></h3><p>${esc(r.body.slice(0,180))}${r.body.length>180?'…':''}</p><div class="cardfoot"><span>♧ &nbsp; ${r.replies} balasan &nbsp; · &nbsp; Semua anonim</span><button class="textbtn" data-room="${r.id}">Ikut percakapan ↗</button></div></article>`).join(''):`<div class="empty"><div class="empty-icon" aria-hidden="true">☁</div><h3>${rooms.length?'Belum ada cerita yang cocok':'Ruang ini menunggu cerita pertamamu.'}</h3><p>${rooms.length?'Coba kata pencarian lain.':'Ada yang ingin kamu ceritakan hari ini?'}</p></div>`}
 let feedVersion=0;
 async function load(){const version=++feedVersion;try{const items=await api('rooms');if(version!==feedVersion)return;rooms=items;render()}catch(e){if(version!==feedVersion)return;rooms=[];$('#feed').innerHTML='<div class="empty"><h3>Ruang belum bisa dimuat</h3><p>'+esc(e.message)+'</p><button class="textbtn" id="retry">Coba lagi ↻</button></div>';$('#retry').onclick=load}}
@@ -175,17 +175,15 @@ $('#search').oninput=render;$('#search').onchange=render;
 $('#sort').addEventListener('change',()=>{updateSortLabels(true);render();});
 updateSortLabels();
 let composeTimer = 0;
+function showComposer(){
+  const compose = $('#compose');
+  if (!compose.open) compose.showModal();
+  syncSakugaCanvas();
+}
 $('#new').addEventListener('click', () => {
   clearTimeout(composeTimer);
-  const compose = $('#compose');
-  if (compose.open) return;
   const delay = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 280;
-  composeTimer = setTimeout(() => {
-    if (!compose.open) {
-      compose.showModal();
-      syncSakugaCanvas();
-    }
-  }, delay);
+  composeTimer = setTimeout(() => window.requireStoryAccount(showComposer), delay);
 });
 document.querySelectorAll('.close').forEach(b=>b.onclick=()=>b.closest('dialog').close());
 $('#title').addEventListener('input', () => {
@@ -239,8 +237,13 @@ async function submitStory(button, share) {
       }
     }, delay);
   } catch (error) {
-    $('#createError').textContent = error.message;
     resetButtons();
+    if (error.status === 401 && $('#compose').open) {
+      $('#compose').close();
+      window.requireStoryAccount(showComposer);
+      return;
+    }
+    $('#createError').textContent = error.message;
   }
 }
 $('#saveStory').addEventListener('click', e => submitStory(e.currentTarget, false));

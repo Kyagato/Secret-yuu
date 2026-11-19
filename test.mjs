@@ -9,11 +9,26 @@ const call=(path,body,guest='a'.repeat(64),cookie='')=>worker.fetch(new Request(
  method:body?'POST':'GET',headers:{Origin:'https://r4hasiakuu.test','Content-Type':'application/json','X-Guest-Key':guest,cookie},
  body:body?JSON.stringify(body):undefined
 }),{DB});
-let r=await call('rooms',{title:'Cerita pertama',body:'Hari ini saya ingin bercerita.'});assert.equal(r.status,201);const {id}=await r.json();
+const { accountApi } = await import('./account-api.mjs');
+const credentials = {email:'Test@Example.test', password:'Testing123'};
+const origin = 'https://r4hasiakuu.test';
+const accountCall = (path, body, cookie = '', source = origin) => accountApi(
+  new Request(origin + '/api/account/' + path, {
+    method: body ? 'POST' : 'GET', headers: {origin:source, cookie},
+    body: body ? JSON.stringify(body) : undefined
+  }), DB, 'test-client'
+);
+const writerSignup = await accountCall('register',{...credentials,email:'writer@example.test'});
+const writer = writerSignup.headers.get('set-cookie').split(';')[0];
+const create = story => call('rooms',story,'',writer);
+const draft = {title:'Cerita pertama',body:'Hari ini saya ingin bercerita.'};
+assert.equal((await call('rooms',draft)).status,401);
+assert.equal((await call('rooms',draft,'','__Host-r4session='+'0'.repeat(64))).status,401);
+let r=await create({title:'Cerita pertama',body:'Hari ini saya ingin bercerita.'});assert.equal(r.status,201);const {id}=await r.json();
 r=await call('rooms/'+id+'/messages',{body:'Terima kasih sudah berbagi.'});assert.equal(r.status,201);
 const data=await(await call('rooms/'+id+'/messages')).json();assert.equal(data.messages.length,1);assert.equal(data.messages[0].body,'Terima kasih sudah berbagi.');assert.equal(data.messages[0].name,undefined);
-assert.equal((await(await call('rooms')).json())[0].replies,1);
-assert.equal((await call('rooms',{title:'a',body:'b',category:'x'})).status,400);
+assert.equal((await(await call('rooms',null,'',writer)).json())[0].replies,1);
+assert.equal((await create({title:'a',body:'b',category:'x'})).status,400);
 assert.equal((await call('rooms/'+id+'/messages',{body:' '})).status,400);
 assert.deepEqual(await (await call('rooms',null,'b'.repeat(64))).json(),[]);
 assert.equal((await call('rooms/'+id+'/messages',{body:'Dari tautan'},'b'.repeat(64))).status,201);
@@ -28,9 +43,9 @@ assert.equal(thread.messages[0].parent_id,null);
 assert.equal((await call('rooms/'+id+'/messages',{body:'Balasan lanjutan',parent_id:child.id})).status,201);
 assert.equal((await call('rooms/'+id+'/messages',{body:'Tidak ada',parent_id:'missing'})).status,400);
 assert.equal((await call('rooms/'+id+'/messages',{body:'Tidak valid',parent_id:123})).status,400);
-const other=await(await call('rooms',{title:'Cerita lainnya',body:'Ini percakapan yang berbeda.',category:'Random'})).json();
+const other=await(await create({title:'Cerita lainnya',body:'Ini percakapan yang berbeda.',category:'Random'})).json();
 assert.equal((await call('rooms/'+other.id+'/messages',{body:'Salah ruang',parent_id:parent.id})).status,400);
-assert.equal((await(await call('rooms')).json()).find(r=>r.id===id).replies,4);
+assert.equal((await(await call('rooms',null,'',writer)).json()).find(r=>r.id===id).replies,4);
 // Upgrade a populated database from the previous version without losing comments.
 const legacy=new DatabaseSync(':memory:');legacy.exec(readFileSync('drizzle/0000_rooms.sql','utf8'));
 legacy.prepare('INSERT INTO rooms VALUES (?,?,?,?,?)').run('old','Judul lama','Cerita lama','Random',1);
@@ -40,15 +55,6 @@ assert.equal(legacy.prepare('SELECT body,parent_id FROM messages').get().body,'K
 assert.equal(legacy.prepare('SELECT parent_id FROM messages').get().parent_id,null);
 console.log('PASS: anonymous comments, targeted replies, nested replies, invalid targets, cross-room protection, legacy migration.');
 
-const { accountApi } = await import('./account-api.mjs');
-const credentials = {email:'Test@Example.test', password:'Testing123'};
-const origin = 'https://r4hasiakuu.test';
-const accountCall = (path, body, cookie = '', source = origin) => accountApi(
-  new Request(origin + '/api/account/' + path, {
-    method: body ? 'POST' : 'GET', headers: {origin:source, cookie},
-    body: body ? JSON.stringify(body) : undefined
-  }), DB, 'test-client'
-);
 const signup = await accountCall('register', credentials);
 assert.equal(signup.status, 201);
 const cookie = signup.headers.get('set-cookie').split(';')[0];
@@ -76,3 +82,6 @@ assert.equal((await accountCall('logout', {}, cookie, 'https://example.test')).s
 assert.equal((await accountCall('logout', {}, cookie)).status, 200);
 assert.equal((await (await accountCall('session', null, cookie)).json()).user, null);
 console.log('PASS: register, duplicate email, credentials, session cookie, origin check, logout.');
+
+await accountCall('logout',{},writer);
+assert.equal((await create(draft)).status,401);

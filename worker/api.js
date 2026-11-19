@@ -28,7 +28,7 @@ export default {async fetch(request,env){
  }
  if(u.pathname==='/api/rooms' && request.method==='POST'){
  const owner=await roomOwner(request,db);
- if(!owner)return json({error:'Muat ulang halaman untuk membuat cerita.'},400);
+ if(!owner?.startsWith('account:'))return json({error:'Masuk atau daftar dulu untuk membuat cerita.'},401);
  const b=await request.json();
  const category=b.category??'Random';
  if(typeof b.title!=='string'||typeof b.body!=='string'||b.title.trim().length<5||b.title.length>120||b.body.trim().length<10||b.body.length>2000||!['Cerita sehari-hari','Isi hati','Hubungan','Kampus & karier','Random'].includes(category))return json({error:'Periksa judul dan ceritamu.'},400);
