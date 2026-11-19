@@ -476,7 +476,6 @@ sakuga-toast { position: fixed; left: 24px; bottom: 24px; z-index: 2147482999; }
 html:has(#accountDialog[open]), body:has(#accountDialog[open]) { overflow-x: clip; }
 body:has(#accountDialog[open]) { position: relative; }
 #accountDialog { max-width: 420px; }
-.account-google { width: 100%; margin: 16px 0 4px; }
 .account-modes {
   position: relative;
   isolation: isolate;

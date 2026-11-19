@@ -19,7 +19,7 @@ form.addEventListener('keydown', event => {
 });
 form.addEventListener('reset', () => { email.value = password.value = ''; });
 const notice = byId('accountStatus');
-const controls = ['googleLogin', 'authSubmit', 'signOut'];
+const controls = ['authSubmit', 'signOut'];
 let user = null;
 let registering = false;
 let pending = false;
@@ -131,11 +131,6 @@ form.onsubmit = event => {
     return result.data.session ? 'Kamu sudah masuk.' : 'Periksa kotak masuk atau spam untuk tautan konfirmasi.';
   });
 };
-byId('googleLogin').onclick = () => perform(async () => {
-  const { error } = await auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
-  if (error) throw error;
-  return 'Membuka Google…';
-});
 byId('signOut').onclick = () => {
   if (demo) {
     sessionStorage.removeItem('demo-login');
