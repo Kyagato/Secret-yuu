@@ -2,18 +2,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { build } from 'esbuild';
 
 if (existsSync('.env.local')) process.loadEnvFile('.env.local');
-const url = process.env.SUPABASE_URL || '';
-const key = process.env.SUPABASE_PUBLISHABLE_KEY || '';
-if ((url || key) && (!/^https:\/\/[a-zA-Z0-9.-]+\/?$/.test(url) || !/^sb_publishable_[\w-]+$/.test(key))) {
-  throw new Error('Gunakan HTTPS project URL dan publishable key Supabase (sb_publishable_…).');
-}
 const accountBundle = await build({
   entryPoints: ['account.js'], bundle: true, platform: 'browser', format: 'iife',
-  minify: true, write: false,
-  define: {
-    AUTH_URL: JSON.stringify(url), AUTH_PUBLIC_KEY: JSON.stringify(key),
-    LOCAL_DEMO: JSON.stringify(!url && process.argv.includes('--local-demo'))
-  }
+  minify: true, write: false
 });
 
 // The worker serves a single page. Embed the local styles and effects for deployment.

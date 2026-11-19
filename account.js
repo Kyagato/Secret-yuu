@@ -1,8 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
-
-const auth = AUTH_URL && AUTH_PUBLIC_KEY
-  ? createClient(AUTH_URL, AUTH_PUBLIC_KEY, { auth: { flowType: 'pkce' } }).auth
-  : null;
 const byId = id => document.getElementById(id);
 const dialog = byId('accountDialog');
 const form = byId('accountForm');
@@ -23,13 +18,7 @@ const controls = ['authSubmit', 'signOut'];
 let user = null;
 let registering = false;
 let pending = false;
-const demo = LOCAL_DEMO && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
-const demoEmail = 'demo@example.test';
-if (demo && sessionStorage.getItem('demo-login') === '1') user = { email: demoEmail };
-
 function accountHint() {
-  if (demo) return registering ? 'Pendaftaran memerlukan koneksi Supabase.' : 'Akun tes lokal: demo@example.test · Kata sandi: Cerita123';
-  if (!auth) return 'Login belum diaktifkan untuk website ini.';
   return registering ? 'Gunakan kata sandi minimal 8 karakter.' : '';
 }
 
@@ -47,35 +36,34 @@ function renderAccount() {
   byId('modeLogin').setAttribute('aria-pressed', String(!registering));
   byId('modeRegister').setAttribute('aria-pressed', String(registering));
   byId('modeLogin').disabled = byId('modeRegister').disabled = pending;
-  for (const id of controls) byId(id).disabled = pending || !auth;
-  if (demo) {
-    byId('authSubmit').disabled = registering;
-    byId('signOut').disabled = false;
-  }
+  for (const id of controls) byId(id).disabled = pending;
 }
 
 async function perform(action) {
-  if (pending || !auth) return;
+  if (pending) return;
   pending = true;
   notice.textContent = 'Memproses…';
   renderAccount();
   try {
     notice.textContent = await action();
   } catch (error) {
-    const reasons = {
-      invalid_credentials: 'Email atau kata sandi salah.',
-      email_not_confirmed: 'Konfirmasi email melalui tautan di kotak masukmu.',
-      weak_password: 'Gunakan kata sandi yang lebih kuat.',
-      over_email_send_rate_limit: 'Tunggu sebentar sebelum meminta email lagi.'
-    };
-    notice.textContent = reasons[error.code] || 'Autentikasi belum berhasil. Periksa koneksi atau coba lagi nanti.';
+    notice.textContent = error.message || 'Layanan akun belum tersedia.';
   } finally {
     pending = false;
     renderAccount();
   }
 }
 
-const redirectTo = location.origin + location.pathname;
+async function accountRequest(action, body) {
+  const response = await fetch('/api/account/' + action, body ? {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  } : { cache: 'no-store' });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data || !('user' in data)) {
+    throw new Error(data?.error || 'Layanan akun belum tersedia.');
+  }
+  user = data.user;
+}
 let openTimer;
 function openAccount(isRegistration) {
   registering = isRegistration;
@@ -108,48 +96,21 @@ byId('modeRegister').onclick = () => switchMode(true);
 form.onsubmit = event => {
   event.preventDefault();
   if (!emailInput.reportValidity() || !passwordInput.reportValidity()) return;
-  if (demo) {
-    if (registering) return;
-    if (byId('loginEmail').value.trim().toLowerCase() !== demoEmail || password.value !== 'Cerita123') {
-      notice.textContent = 'Email atau kata sandi salah.';
-      return;
-    }
-    user = { email: demoEmail };
-    sessionStorage.setItem('demo-login', '1');
-    password.value = '';
-    notice.textContent = 'Kamu masuk dengan akun tes lokal.';
-    renderAccount();
-    return;
-  }
   perform(async () => {
-    const credentials = { email: byId('loginEmail').value.trim(), password: password.value };
-    const result = registering
-      ? await auth.signUp({ ...credentials, options: { emailRedirectTo: redirectTo } })
-      : await auth.signInWithPassword(credentials);
-    if (result.error) throw result.error;
+    await accountRequest(registering ? 'register' : 'login', { email: email.value, password: password.value });
     password.value = '';
-    return result.data.session ? 'Kamu sudah masuk.' : 'Periksa kotak masuk atau spam untuk tautan konfirmasi.';
+    return registering ? 'Akun berhasil dibuat.' : 'Kamu sudah masuk.';
   });
 };
-byId('signOut').onclick = () => {
-  if (demo) {
-    sessionStorage.removeItem('demo-login');
-    user = null;
-    form.reset();
-    notice.textContent = 'Kamu sudah keluar.';
-    renderAccount();
-    return;
-  }
-  return perform(async () => {
-  const { error } = await auth.signOut({ scope: 'local' });
-  if (error) throw error;
+byId('signOut').onclick = () => perform(async () => {
+  await accountRequest('logout', {});
   form.reset();
   registering = false;
   return 'Kamu sudah keluar.';
-  });
-};
-auth?.onAuthStateChange((_event, session) => {
-  user = session?.user ?? null;
+});
+pending = true;
+renderAccount();
+accountRequest('session').catch(() => {}).finally(() => {
+  pending = false;
   renderAccount();
 });
-renderAccount();

@@ -1,6 +1,7 @@
 import { getConnectionString } from '@netlify/database';
 import pg from 'pg';
 import api from '../../worker/api.js';
+import { accountApi } from '../../account-api.mjs';
 
 let pool;
 // Reuse the same validated API as the local SQLite app.
@@ -20,8 +21,9 @@ function prepare(sql, values = []) {
   };
 }
 
-export default async function conversations(request) {
+export default async function conversations(request, context) {
   pool ??= new pg.Pool({ connectionString: getConnectionString(), max: 2 });
+  if (new URL(request.url).pathname.startsWith('/api/account/')) return accountApi(request, { prepare }, context.ip);
   return api.fetch(request, { DB: { prepare } });
 }
 

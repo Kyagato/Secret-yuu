@@ -14,18 +14,9 @@ Setelah deploy, buka URL HTTPS Netlify di dua browser. Buat cerita di browser pe
 
 ### Akun email
 
-Menu **Masuk / Daftar** menggunakan Supabase Auth. Akun bersifat opsional. Cerita dan komentar tidak menyimpan email atau ID pengguna. Sesi disimpan oleh SDK di browser dan dipulihkan setelah halaman dimuat ulang.
+Fungsi Netlify melayani pendaftaran, login, dan logout melalui `/api/account/`. Migrasi `0002_accounts.sql` membuat tabel akun dan sesi di PostgreSQL Netlify. Deploy dengan database dan migrasi aktif, lalu coba daftar, muat ulang halaman, keluar, dan masuk kembali. Akun baru langsung aktif. Versi ini belum menyediakan verifikasi alamat email atau pemulihan kata sandi melalui email.
 
-1. Buat proyek Supabase milikmu. Di **Authentication → Providers**, aktifkan Email dan **Confirm email**. Untuk pendaftaran publik, konfigurasikan SMTP agar email konfirmasi terkirim ke pengguna.
-2. Di Supabase **Authentication → URL Configuration**, atur Site URL ke domain website. Tambahkan URL kembali yang tepat untuk produksi serta `http://localhost:3000/` untuk pengujian. Buka tautan konfirmasi pada browser tempat mendaftar untuk menyelesaikan alur PKCE.
-3. Untuk laptop, buat `.env.local` dalam folder proyek. Untuk Netlify, tambahkan dua variabel yang sama di pengaturan environment untuk **Builds**:
-
-   ```dotenv
-   SUPABASE_URL=https://PROJECT-REF.supabase.co
-   SUPABASE_PUBLISHABLE_KEY=sb_publishable_GANTI_DENGAN_KEY_PUBLIK
-   ```
-
-4. Jalankan kembali `npm start` atau deploy ulang Netlify. Uji daftar, konfirmasi email, masuk, muat ulang halaman, keluar, dan masuk kembali dengan email. Gunakan publishable key dari proyek Supabase yang sama. Build memasukkan kedua nilai publik ini ke halaman.
+Preview lokal memakai SQLite dengan akun uji `demo@example.test` dan kata sandi `Cerita123`. Di situs publik, pengguna mendaftar sendiri.
 
 ### Google AdSense
 

@@ -32,3 +32,25 @@ migrateLocal(legacy);migrateLocal(legacy);
 assert.equal(legacy.prepare('SELECT body,parent_id FROM messages').get().body,'Komentar lama');
 assert.equal(legacy.prepare('SELECT parent_id FROM messages').get().parent_id,null);
 console.log('PASS: anonymous comments, targeted replies, nested replies, invalid targets, cross-room protection, legacy migration.');
+
+const { accountApi } = await import('./account-api.mjs');
+const credentials = {email:'Test@Example.test', password:'Testing123'};
+const origin = 'https://r4hasiakuu.test';
+const accountCall = (path, body, cookie = '', source = origin) => accountApi(
+  new Request(origin + '/api/account/' + path, {
+    method: body ? 'POST' : 'GET', headers: {origin:source, cookie},
+    body: body ? JSON.stringify(body) : undefined
+  }), DB, 'test-client'
+);
+const signup = await accountCall('register', credentials);
+assert.equal(signup.status, 201);
+const cookie = signup.headers.get('set-cookie').split(';')[0];
+assert.match(signup.headers.get('set-cookie'), /HttpOnly; SameSite=Lax; Max-Age=\d+; Secure/);
+assert.equal((await accountCall('register', credentials)).status, 409);
+assert.equal((await accountCall('login', {...credentials,password:'wrong'})).status, 401);
+assert.equal((await accountCall('login', credentials)).status, 200);
+assert.equal((await (await accountCall('session', null, cookie)).json()).user.email, 'test@example.test');
+assert.equal((await accountCall('logout', {}, cookie, 'https://example.test')).status, 403);
+assert.equal((await accountCall('logout', {}, cookie)).status, 200);
+assert.equal((await (await accountCall('session', null, cookie)).json()).user, null);
+console.log('PASS: register, duplicate email, credentials, session cookie, origin check, logout.');

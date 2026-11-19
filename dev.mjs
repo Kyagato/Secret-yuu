@@ -3,18 +3,20 @@ import { watch } from 'node:fs';
 import { createServer } from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import { migrateLocal } from './migrate.mjs';
+import { accountApi, seedLocalDemo } from './account-api.mjs';
 
 const sqlite = new DatabaseSync('local.sqlite');
 migrateLocal(sqlite);
 const DB={prepare(sql){const s=sqlite.prepare(sql);let values=[];return {bind(...args){values=args;return this},async all(){return {results:s.all(...values)}},async first(){return s.get(...values)},async run(){return s.run(...values)}}}};
 
 const clients = new Set();
+await seedLocalDemo(DB);
 let version = Date.now();
 let worker = (await import('./dist/server/index.js')).default;
 
 async function rebuild() {
   try {
-    execFileSync(process.execPath, ['build.mjs', '--local-demo'], { stdio: 'inherit' });
+    execFileSync(process.execPath, ['build.mjs'], { stdio: 'inherit' });
     const nextVersion = version + 1;
     worker = (await import('./dist/server/index.js?v=' + nextVersion)).default;
     version = nextVersion;
@@ -49,7 +51,9 @@ const server = createServer(async (req, res) => {
     const request = new Request(url, { method: req.method, headers: req.headers,
       ...(['GET', 'HEAD'].includes(req.method) ? {} : { body: Buffer.concat(chunks) }) });
     const pageVersion = version;
-    const response = await worker.fetch(request, { DB });
+    const response = req.url.startsWith('/api/account/')
+      ? await accountApi(request, DB, req.socket.remoteAddress)
+      : await worker.fetch(request, { DB });
     res.writeHead(response.status, { ...Object.fromEntries(response.headers), 'Cache-Control': 'no-store' });
     if (response.headers.get('Content-Type')?.startsWith('text/html')) {
       const reload = '<script>const previewEvents=new EventSource("/__preview/events");previewEvents.onmessage=e=>{if(Number(e.data)!==' + pageVersion + '){previewEvents.close();location.reload()}}</script>';
