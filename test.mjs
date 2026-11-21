@@ -5,13 +5,13 @@ import worker from './dist/server/index.js';
 import {migrateLocal} from './migrate.mjs';
 const sqlite=new DatabaseSync(':memory:');migrateLocal(sqlite);
 const DB={prepare(sql){let args=[];const s=sqlite.prepare(sql);return {bind(...a){args=a;return this},async all(){return {results:s.all(...args)}},async first(){return s.get(...args)},async run(){return s.run(...args)}}}};
-const call=(path,body,guest='a'.repeat(64),cookie='')=>worker.fetch(new Request('https://r4hasiakuu.test/api/'+path,{
- method:body?'POST':'GET',headers:{Origin:'https://r4hasiakuu.test','Content-Type':'application/json','X-Guest-Key':guest,cookie},
+const call=(path,body,guest='a'.repeat(64),cookie='')=>worker.fetch(new Request('https://chat2anonym.test/api/'+path,{
+ method:body?'POST':'GET',headers:{Origin:'https://chat2anonym.test','Content-Type':'application/json','X-Guest-Key':guest,cookie},
  body:body?JSON.stringify(body):undefined
 }),{DB});
 const { accountApi } = await import('./account-api.mjs');
 const credentials = {email:'Test@Example.test', password:'Testing123'};
-const origin = 'https://r4hasiakuu.test';
+const origin = 'https://chat2anonym.test';
 const accountCall = (path, body, cookie = '', source = origin) => accountApi(
   new Request(origin + '/api/account/' + path, {
     method: body ? 'POST' : 'GET', headers: {origin:source, cookie},

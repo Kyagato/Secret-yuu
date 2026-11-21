@@ -75,5 +75,5 @@ server.on('error', error => {
   console.log(`Port ${port} sedang dipakai. Mencoba port ${port + 1}…`);
   server.listen(++port);
 });
-server.on('listening', () => console.log('R4hasiakuu: http://localhost:' + port));
+server.on('listening', () => console.log('Chat2Anonym: http://localhost:' + port));
 server.listen(port);
