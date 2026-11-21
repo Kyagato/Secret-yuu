@@ -23,7 +23,7 @@ function prepare(sql, values = []) {
 
 export default async function conversations(request, context) {
   pool ??= new pg.Pool({ connectionString: getConnectionString(), max: 2 });
-  if (new URL(request.url).pathname.startsWith('/api/account/')) return accountApi(request, { prepare }, context.ip);
+  if (new URL(request.url).pathname.startsWith('/api/account/')) return accountApi(request, { prepare }, context.ip, context.waitUntil?.bind(context));
   return api.fetch(request, { DB: { prepare } });
 }
 

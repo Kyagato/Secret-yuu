@@ -8,7 +8,7 @@ async function roomOwner(request, db) {
  const cookieName = new URL(request.url).protocol === 'https:' ? '__Host-r4session=' : 'r4session=';
  const token = (request.headers.get('cookie') || '').split(/;\s*/).find(part => part.startsWith(cookieName))?.slice(cookieName.length);
  if (token && /^[0-9a-f]{64}$/.test(token)) {
-   const session = await db.prepare('SELECT email FROM account_sessions WHERE token_hash=? AND expires_at>?').bind(await digest(token), Date.now()).first();
+   const session = await db.prepare('SELECT s.email FROM account_sessions s JOIN accounts a ON a.email=s.email AND a.session_version=s.session_version WHERE s.token_hash=? AND s.expires_at>?').bind(await digest(token), Date.now()).first();
    if (session) return 'account:' + await digest(session.email);
  }
  const guest = request.headers.get('X-Guest-Key');

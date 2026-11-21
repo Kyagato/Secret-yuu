@@ -78,8 +78,26 @@
         <sakuga-input id="loginPassword" name="password" label="Kata sandi" type="password" placeholder="Masukkan kata sandi" autocomplete="current-password"></sakuga-input>
         <button class="primary" id="authSubmit" type="submit">Masuk dengan email</button>
       </form>
+      <button type="button" class="textbtn" id="forgotOpen">Lupa kata sandi?</button>
       </div></div>
     </div>
+    <section id="recoveryPanel" hidden>
+      <form id="recoveryForm" method="post">
+        <div id="recoveryEmailFields">
+          <p>Masukkan email yang kamu gunakan saat mendaftar.</p>
+          <label for="recoveryEmail">Email akun</label>
+          <input id="recoveryEmail" type="email" autocomplete="email" required>
+        </div>
+        <div id="recoveryPasswordFields" hidden>
+          <label for="recoveryPassword">Kata sandi baru</label>
+          <input id="recoveryPassword" type="password" autocomplete="new-password" minlength="8" required disabled>
+          <label for="recoveryConfirm">Ulangi kata sandi baru</label>
+          <input id="recoveryConfirm" type="password" autocomplete="new-password" required disabled>
+        </div>
+        <button id="recoverySubmit" class="primary" type="submit">Kirim tautan pemulihan</button>
+      </form>
+      <button id="recoveryBack" class="textbtn" type="button">Kembali ke Masuk</button>
+    </section>
     <div id="accountMember" hidden><p class="privacy">Cerita dan balasanmu tetap tampil anonim.</p><p id="memberEmail"></p><button class="share-button" id="signOut" type="button">Keluar</button></div>
     <p id="accountStatus" class="privacy" role="status"></p>
   </dialog>

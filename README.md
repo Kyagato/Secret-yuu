@@ -14,7 +14,13 @@ Setelah deploy, buka URL HTTPS Netlify di dua browser. Buat cerita di browser pe
 
 ### Akun email
 
-Fungsi Netlify melayani pendaftaran, login, dan logout melalui `/api/account/`. Migrasi `0002_accounts.sql` membuat tabel akun dan sesi di PostgreSQL Netlify. Deploy dengan database dan migrasi aktif, lalu coba daftar, muat ulang halaman, keluar, dan masuk kembali. Akun baru langsung aktif. Versi ini belum menyediakan verifikasi alamat email atau pemulihan kata sandi melalui email.
+Fungsi Netlify melayani pendaftaran, login, dan logout melalui `/api/account/`. Migrasi `0002_accounts.sql` membuat tabel akun dan sesi di PostgreSQL Netlify. Deploy dengan database dan migrasi aktif, lalu coba daftar, muat ulang halaman, keluar, dan masuk kembali. Akun baru langsung aktif. Email belum diverifikasi saat pendaftaran. Untuk mengaktifkan pemulihan kata sandi, verifikasi domain pengirim di Resend dan isi variabel Netlify Functions:
+
+- `RESEND_API_KEY` — kunci pengiriman email (rahasia, hanya di server).
+- `RESET_EMAIL_FROM` — alamat pengirim pada domain terverifikasi.
+- `RESET_SITE_URL` — origin HTTPS situs produksi yang menerima tautan pemulihan.
+
+Deploy ulang dengan migrasi `0004_password_recovery.sql`. Uji pengiriman ke akun sendiri. Tautan terbaru berlaku selama 15 menit dan sekali pakai. Mengganti kata sandi membatalkan sesi lama.
 
 Preview lokal memakai SQLite dengan akun uji `demo@example.test` dan kata sandi `Cerita123`. Di situs publik, pengguna mendaftar sendiri.
 

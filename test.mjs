@@ -85,3 +85,44 @@ console.log('PASS: register, duplicate email, credentials, session cookie, origi
 
 await accountCall('logout',{},writer);
 assert.equal((await create(draft)).status,401);
+
+// Exercise delivery through an in-memory mailbox; never send test mail.
+const mailbox = [];
+const realFetch = globalThis.fetch;
+const mailSettings = {RESEND_API_KEY:'test-only',RESET_EMAIL_FROM:'test@example.test',RESET_SITE_URL:origin};
+const previous = Object.fromEntries(Object.keys(mailSettings).map(k=>[k,process.env[k]]));
+try {
+  Object.assign(process.env,mailSettings);
+  globalThis.fetch = async (url,options) => {
+    assert.equal(url,'https://api.resend.com/emails');
+    mailbox.push(JSON.parse(options.body));
+    return Response.json({id:'test'});
+  };
+  const active = (await accountCall('login',credentials)).headers.get('set-cookie').split(';')[0];
+  const ask = email=>accountCall('forgot',{email});
+  const lastToken = ()=>mailbox.at(-1).text.match(/#reset=([0-9a-f]{64})/)[1];
+  const replacement = 'New-test-password';
+  const reset = token=>accountCall('reset',{token,password:replacement});
+  const unknown = await ask('unknown@example.test');
+  assert.deepEqual(await unknown.json(),await (await ask(credentials.email)).json());
+  assert.equal(mailbox.length,1);
+  const old = lastToken();
+  await ask(credentials.email);
+  assert.equal((await reset(old)).status,400);
+  sqlite.prepare('UPDATE accounts SET reset_expires=0 WHERE email=?').run(credentials.email.toLowerCase());
+  assert.equal((await reset(lastToken())).status,400);
+  await ask(credentials.email);
+  const valid = lastToken();
+  assert.equal((await reset(valid)).status,200);
+  assert.equal((await reset(valid)).status,400);
+  assert.equal((await (await accountCall('session',null,active)).json()).user,null);
+  assert.equal((await call('rooms',draft,'',active)).status,401);
+  assert.equal((await accountCall('login',credentials)).status,401);
+  assert.equal((await accountCall('login',{...credentials,password:replacement})).status,200);
+  console.log('PASS: recovery request, token replacement, expiry, single use and session revocation.');
+} finally {
+  globalThis.fetch = realFetch;
+  for(const [key,value] of Object.entries(previous)) {
+    if(value===undefined) delete process.env[key]; else process.env[key]=value;
+  }
+}

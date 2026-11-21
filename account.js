@@ -14,7 +14,9 @@ form.addEventListener('keydown', event => {
 });
 form.addEventListener('reset', () => { email.value = password.value = ''; });
 const notice = byId('accountStatus');
-const controls = ['authSubmit', 'signOut'];
+const controls = ['authSubmit', 'signOut', 'forgotOpen', 'recoverySubmit', 'recoveryBack'];
+let recovery = '';
+let resetToken = '';
 let user = null;
 let registering = false;
 let pending = false;
@@ -26,8 +28,11 @@ function renderAccount() {
   byId('accountOpen').textContent = user ? 'Akun saya' : 'Masuk';
   byId('registerOpen').hidden = Boolean(user);
   byId('accountTitle').textContent = user ? 'Akun saya' : registering ? 'Daftar akun' : 'Masuk';
-  byId('accountGuest').hidden = Boolean(user);
-  byId('accountMember').hidden = !user;
+  byId('accountGuest').hidden = Boolean(user || recovery);
+  byId('forgotOpen').hidden = registering;
+  byId('recoveryPanel').hidden = !recovery;
+  if (recovery) byId('accountTitle').textContent = recovery === 'reset' ? 'Buat kata sandi baru' : 'Lupa kata sandi';
+  byId('accountMember').hidden = !user || !!recovery;
   byId('memberEmail').textContent = user?.email || '';
   passwordInput.autocomplete = registering ? 'new-password' : 'current-password';
   passwordInput.minLength = registering ? 8 : 1;
@@ -54,14 +59,19 @@ async function perform(action) {
   }
 }
 
-async function accountRequest(action, body) {
+async function requestAccountData(action, body) {
   const response = await fetch('/api/account/' + action, body ? {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
   } : { cache: 'no-store' });
   const data = await response.json().catch(() => null);
-  if (!response.ok || !data || !('user' in data)) {
+  if (!response.ok || !data) {
     throw new Error(data?.error || 'Layanan akun belum tersedia.');
   }
+  return data;
+}
+
+async function accountRequest(action, body) {
+  const data = await requestAccountData(action, body);
   user = data.user;
   if (action !== 'session') window.dispatchEvent(new Event('account-changed'));
 }
@@ -95,7 +105,7 @@ function openAccount(isRegistration) {
 }
 byId('accountOpen').onclick = () => openAccount(false);
 byId('registerOpen').onclick = () => openAccount(true);
-dialog.addEventListener('close', () => { password.value = ''; afterStoryLogin = null; });
+dialog.addEventListener('close', () => { resetRecovery(); password.value = ''; afterStoryLogin = null; });
 function switchMode(next) {
   if (pending || registering === next) return;
   registering = next;
@@ -140,3 +150,63 @@ const initialSession = accountRequest('session').catch(() => {}).finally(() => {
   pending = false;
   renderAccount();
 });
+
+function resetRecovery() {
+  recovery = '';
+  resetToken = '';
+  byId('recoveryForm').reset();
+}
+
+function openRecovery(mode) {
+  recovery = mode;
+  const resetting = mode === 'reset';
+  byId('recoveryEmailFields').hidden = resetting;
+  byId('recoveryEmail').disabled = resetting;
+  byId('recoveryPasswordFields').hidden = !resetting;
+  byId('recoveryPassword').disabled = byId('recoveryConfirm').disabled = !resetting;
+  byId('recoverySubmit').textContent = resetting ? 'Simpan kata sandi baru' : 'Kirim tautan pemulihan';
+  byId('recoveryEmail').value = email.value;
+  password.value = '';
+  notice.textContent = resetting ? 'Gunakan minimal 8 karakter.' : '';
+  renderAccount();
+  if (!dialog.open) dialog.showModal();
+  byId(resetting ? 'recoveryPassword' : 'recoveryEmail').focus();
+}
+
+byId('forgotOpen').onclick = () => openRecovery('forgot');
+byId('recoveryBack').onclick = () => {
+  resetRecovery();
+  registering = false;
+  notice.textContent = '';
+  renderAccount();
+  if (!user) email.focus();
+};
+byId('recoveryForm').onsubmit = event => {
+  event.preventDefault();
+  if (recovery === 'forgot') {
+    perform(async () => {
+      await requestAccountData('forgot', { email: byId('recoveryEmail').value });
+      return 'Jika email terdaftar, cek kotak masuk atau spam untuk tautan pemulihan.';
+    });
+  } else if (recovery === 'reset') {
+    const next = byId('recoveryPassword').value;
+    if (next !== byId('recoveryConfirm').value) {
+      notice.textContent = 'Kedua kata sandi harus sama.';
+      byId('recoveryConfirm').focus();
+      return;
+    }
+    perform(async () => {
+      await requestAccountData('reset', {token:resetToken, password:next});
+      resetRecovery();
+      registering = false;
+      await accountRequest('session');
+      window.dispatchEvent(new Event('account-changed'));
+      return 'Kata sandi berhasil diganti. Silakan masuk dengan kata sandi baru.';
+    });
+  }
+};
+if (location.hash.startsWith('#reset=')) {
+  resetToken = location.hash.slice(7);
+  history.replaceState(history.state, '', location.pathname + location.search);
+  openRecovery('reset');
+}
