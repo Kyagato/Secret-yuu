@@ -88,19 +88,43 @@ assert.equal((await create(draft)).status,401);
 
 // Exercise delivery through an in-memory mailbox; never send test mail.
 const mailbox = [];
-const realFetch = globalThis.fetch;
-const mailSettings = {RESEND_API_KEY:'test-only',RESET_EMAIL_FROM:'test@example.test',RESET_SITE_URL:origin};
+const { SMTPServer } = await import('smtp-server');
+const { default: nodemailer } = await import('nodemailer');
+const createTransport = nodemailer.createTransport;
+const smtp = new SMTPServer({
+  onAuth(auth, session, done) {
+    const valid = session.secure && auth.username === 'tester' && auth.password === 'local-only';
+    done(valid ? null : new Error('Invalid test credentials'), {user:'tester'});
+  },
+  onData(stream, session, done) {
+    const chunks = [];
+    stream.on('data', chunk => chunks.push(chunk));
+    stream.on('end', () => {
+      mailbox.push(Buffer.concat(chunks).toString().replace(/=\r?\n/g, '').replace(/=3D/g, '='));
+      done();
+    });
+    stream.on('error', done);
+  }
+});
+await new Promise((resolve,reject) => {
+  smtp.once('error',reject);
+  smtp.listen(0,'127.0.0.1',resolve);
+});
+const mailSettings = {SMTP_HOST:'127.0.0.1',SMTP_PORT:String(smtp.server.address().port),
+  SMTP_USER:'tester',SMTP_PASS:'local-only',RESET_EMAIL_FROM:'test@example.test',RESET_SITE_URL:origin};
 const previous = Object.fromEntries(Object.keys(mailSettings).map(k=>[k,process.env[k]]));
 try {
   Object.assign(process.env,mailSettings);
-  globalThis.fetch = async (url,options) => {
-    assert.equal(url,'https://api.resend.com/emails');
-    mailbox.push(JSON.parse(options.body));
-    return Response.json({id:'test'});
+  // Only the loopback test server uses a self-signed certificate.
+  nodemailer.createTransport = options => {
+    assert.equal(options.host,'127.0.0.1');
+    assert.equal(options.port,smtp.server.address().port);
+    assert.equal(options.requireTLS,true);
+    return createTransport({...options,tls:{rejectUnauthorized:false}});
   };
   const active = (await accountCall('login',credentials)).headers.get('set-cookie').split(';')[0];
   const ask = email=>accountCall('forgot',{email});
-  const lastToken = ()=>mailbox.at(-1).text.match(/#reset=([0-9a-f]{64})/)[1];
+  const lastToken = ()=>mailbox.at(-1).match(/#reset=([0-9a-f]{64})/)[1];
   const replacement = 'New-test-password';
   const reset = token=>accountCall('reset',{token,password:replacement});
   const unknown = await ask('unknown@example.test');
@@ -121,7 +145,8 @@ try {
   assert.equal((await accountCall('login',{...credentials,password:replacement})).status,200);
   console.log('PASS: recovery request, token replacement, expiry, single use and session revocation.');
 } finally {
-  globalThis.fetch = realFetch;
+  nodemailer.createTransport = createTransport;
+  await new Promise(resolve => smtp.close(resolve));
   for(const [key,value] of Object.entries(previous)) {
     if(value===undefined) delete process.env[key]; else process.env[key]=value;
   }

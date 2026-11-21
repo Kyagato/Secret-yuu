@@ -14,10 +14,12 @@ Setelah deploy, buka URL HTTPS Netlify di dua browser. Buat cerita di browser pe
 
 ### Akun email
 
-Fungsi Netlify melayani pendaftaran, login, dan logout melalui `/api/account/`. Migrasi `0002_accounts.sql` membuat tabel akun dan sesi di PostgreSQL Netlify. Deploy dengan database dan migrasi aktif, lalu coba daftar, muat ulang halaman, keluar, dan masuk kembali. Akun baru langsung aktif. Email belum diverifikasi saat pendaftaran. Untuk mengaktifkan pemulihan kata sandi, verifikasi domain pengirim di Resend dan isi variabel Netlify Functions:
+Fungsi Netlify melayani pendaftaran, login, dan logout melalui `/api/account/`. Migrasi `0002_accounts.sql` membuat tabel akun dan sesi di PostgreSQL Netlify. Deploy dengan database dan migrasi aktif, lalu coba daftar, muat ulang halaman, keluar, dan masuk kembali. Akun baru langsung aktif. Email belum diverifikasi saat pendaftaran. Untuk mengaktifkan pemulihan kata sandi, isi variabel berikut di Netlify untuk konteks Production dengan cakupan Functions:
 
-- `RESEND_API_KEY` — kunci pengiriman email (rahasia, hanya di server).
-- `RESET_EMAIL_FROM` — alamat pengirim pada domain terverifikasi.
+- `SMTP_HOST` — nama server SMTP dari penyedia email.
+- `SMTP_PORT` — gunakan port sesuai petunjuk penyedia, biasanya 587 (STARTTLS) atau 465 (TLS langsung).
+- `SMTP_USER` dan `SMTP_PASS` — kredensial SMTP pengirim. Jika penyedia memakai sandi aplikasi, gunakan sandi aplikasi. Simpan sandi hanya di konfigurasi server.
+- `RESET_EMAIL_FROM` — alamat pengirim yang diizinkan oleh penyedia SMTP.
 - `RESET_SITE_URL` — origin HTTPS situs produksi yang menerima tautan pemulihan.
 
 Deploy ulang dengan migrasi `0004_password_recovery.sql`. Uji pengiriman ke akun sendiri. Tautan terbaru berlaku selama 15 menit dan sekali pakai. Mengganti kata sandi membatalkan sesi lama.

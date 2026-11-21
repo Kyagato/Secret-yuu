@@ -1,3 +1,4 @@
+import nodemailer from 'nodemailer';
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 
@@ -113,8 +114,10 @@ async function recoverPassword(action, request, db, ip, background) {
 
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply({error:'Masukkan alamat email yang valid.'},400);
-  const {RESEND_API_KEY, RESET_EMAIL_FROM, RESET_SITE_URL} = process.env;
-  if (!RESEND_API_KEY || !RESET_EMAIL_FROM || !RESET_SITE_URL) return reply({error:'Pengiriman email pemulihan belum diaktifkan.'},503);
+  const { SMTP_HOST, SMTP_USER, SMTP_PASS, RESET_EMAIL_FROM, RESET_SITE_URL } = process.env;
+  const port = Number(process.env.SMTP_PORT || 587);
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !RESET_EMAIL_FROM || !RESET_SITE_URL ||
+      !Number.isInteger(port) || port < 1 || port > 65535) return reply({error:'Pengiriman email pemulihan belum diaktifkan.'},503);
   const link = new URL('/', RESET_SITE_URL);
   if (link.protocol !== 'https:' && !(link.protocol === 'http:' && link.hostname === 'localhost')) return reply({error:'Alamat pemulihan belum dikonfigurasi.'},503);
   const token = randomBytes(32).toString('hex');
@@ -126,13 +129,17 @@ async function recoverPassword(action, request, db, ip, background) {
     if (account) {
       const deliver = async () => {
         try {
-          const response = await fetch('https://api.resend.com/emails', {
-            method:'POST', headers:{Authorization:'Bearer ' + RESEND_API_KEY, 'Content-Type':'application/json'},
-            signal:AbortSignal.timeout(10000),
-            body:JSON.stringify({from:RESET_EMAIL_FROM,to:[email],subject:'Atur ulang kata sandi Chat2Anonym',
-              text:'Buka tautan ini untuk membuat kata sandi baru dalam 15 menit:\n\n' + link.href + '\n\nJika kamu tidak memintanya, abaikan email ini.'})
+          const mailer = nodemailer.createTransport({
+            host: SMTP_HOST, port, secure: port === 465, requireTLS: true,
+            auth: { user: SMTP_USER, pass: SMTP_PASS },
+            connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000
           });
-          if (!response.ok) throw new Error();
+          await mailer.sendMail({
+            from: RESET_EMAIL_FROM, to: { address: email, name: '' },
+            subject: 'Atur ulang kata sandi Chat2Anonym',
+            text: 'Buka tautan ini untuk membuat kata sandi baru dalam 15 menit:\n\n' +
+              link.href + '\n\nJika kamu tidak memintanya, abaikan email ini.'
+          });
         } catch {
           console.error('Pengiriman email pemulihan gagal. Periksa konfigurasi layanan email.');
           await db.prepare('UPDATE accounts SET reset_hash=NULL, reset_expires=NULL WHERE reset_hash=?').bind(tokenHash).run();
