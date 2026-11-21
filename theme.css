@@ -115,7 +115,7 @@ header {
   font: inherit;
   font-size: .76rem;
 }
-.dot { display: inline-block; flex: 0 0 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--spark); }
+.hero-arrow { color: var(--spark); font-size: 1rem; line-height: 1; }
 main { max-width: 1232px; margin: 0 auto; padding: 34px 36px 0; }
 .hero {
   position: relative;
