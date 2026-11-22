@@ -140,13 +140,14 @@ async function recoverPassword(action, request, db, ip, background) {
             text: 'Buka tautan ini untuk membuat kata sandi baru dalam 15 menit:\n\n' +
               link.href + '\n\nJika kamu tidak memintanya, abaikan email ini.'
           });
-        } catch {
-          console.error('Pengiriman email pemulihan gagal. Periksa konfigurasi layanan email.');
+        } catch (error) {
+          console.error('Pengiriman email pemulihan gagal:', error.code || error.name, error.command || '');
           await db.prepare('UPDATE accounts SET reset_hash=NULL, reset_expires=NULL WHERE reset_hash=?').bind(tokenHash).run();
+          return false;
         }
+        return true;
       };
-      if (background) background(deliver());
-      else await deliver();
+      if (!await deliver()) return reply({error:'Email belum berhasil dikirim. Periksa koneksi SMTP di pengaturan situs.'},503);
     }
   }
   return reply({ok:true});
