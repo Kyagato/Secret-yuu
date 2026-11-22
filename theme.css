@@ -283,6 +283,39 @@ sakuga-input.search {
 }
 .card { margin-bottom: 14px; }
 .cardtop { gap: 8px; flex-wrap: wrap; font-size: .74rem; color: var(--muted); }
+.feed-skeleton {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+  background-image:
+    radial-gradient(circle closest-side, var(--lavender) 98%, transparent),
+    linear-gradient(var(--soft) 0 0), linear-gradient(var(--lavender) 0 0),
+    linear-gradient(var(--soft) 0 0), linear-gradient(var(--soft) 0 0);
+  background-size: 30px 30px, 22% 10px, 54% 18px, 79% 12px, 34% 10px;
+  background-position: 18px 18px, 58px 28px, 18px 64px, 18px 99px, 18px 144px;
+  background-repeat: no-repeat;
+}
+.feed-skeleton span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .feed-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 25%, var(--paper) 50%, transparent 75%);
+    opacity: .65;
+    animation: feed-shimmer 1.5s linear infinite;
+  }
+  @keyframes feed-shimmer {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+  }
+}
 .card-author { color: var(--ink); }
 .avatar, .rule .symbol {
   display: inline-grid;

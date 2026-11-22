@@ -40,7 +40,7 @@
             <span class="sort-label" id="sortPopular">Paling ramai</span>
           </div>
         </div>
-        <div id="feed" aria-live="polite"><div class="empty">Memuat percakapan…</div></div>
+        <div id="feed" aria-live="polite"><div class="card feed-skeleton" role="status"><span>Memuat percakapan…</span></div></div>
       </section>
       <aside>
         <div class="sidecard" id="guidelines">
@@ -173,7 +173,23 @@ async function api(path,options={}){
  const r=await fetch('/api/'+path,{...options,headers,cache:'no-store'});const b=await r.json();if(!r.ok)throw Object.assign(new Error(b.error||'Ada kendala. Coba lagi.'),{status:r.status});return b}const post=b=>({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
 function render(){let items=rooms.filter(r=>(r.title+' '+r.body).toLowerCase().includes($('#search').value.toLowerCase()));if($('#sort').checked)items.sort((a,b)=>b.replies-a.replies);$('#feed').innerHTML=items.length?items.map(r=>`<article class="card"><div class="cardtop"><span class="avatar">✳</span><b class="card-author">Kamu</b><span>· ${time(r.created)}</span><span class="label">${esc(r.category)}</span></div><h3><button data-room="${r.id}">${esc(r.title)}</button></h3><p>${esc(r.body.slice(0,180))}${r.body.length>180?'…':''}</p><div class="cardfoot"><span>♧ &nbsp; ${r.replies} balasan &nbsp; · &nbsp; Semua anonim</span><button class="textbtn" data-room="${r.id}">Ikut percakapan ↗</button></div></article>`).join(''):`<div class="empty"><div class="empty-icon" aria-hidden="true">☁</div><h3>${rooms.length?'Belum ada cerita yang cocok':'Ruang ini menunggu cerita pertamamu.'}</h3><p>${rooms.length?'Coba kata pencarian lain.':'Ada yang ingin kamu ceritakan hari ini?'}</p></div>`}
 let feedVersion=0;
-async function load(){const version=++feedVersion;try{const items=await api('rooms');if(version!==feedVersion)return;rooms=items;render()}catch(e){if(version!==feedVersion)return;rooms=[];$('#feed').innerHTML='<div class="empty"><h3>Ruang belum bisa dimuat</h3><p>'+esc(e.message)+'</p><button class="textbtn" id="retry">Coba lagi ↻</button></div>';$('#retry').onclick=load}}
+const feedSkeleton = $('#feed').firstElementChild;
+async function load(){
+ const version = ++feedVersion;
+ const feed = $('#feed');
+ feed.replaceChildren(feedSkeleton);
+ try {
+  const items = await api('rooms');
+  if(version !== feedVersion) return;
+  rooms = items;
+  render();
+ } catch(e) {
+  if(version !== feedVersion) return;
+  rooms = [];
+  feed.innerHTML = '<div class="empty"><h3>Ruang belum bisa dimuat</h3><p>'+esc(e.message)+'</p><button class="textbtn" id="retry">Coba lagi ↻</button></div>';
+  $('#retry').onclick = load;
+ }
+}
 function updateSortLabels(pop = false){
   const popular = $('#sort').checked;
   const latestEl = $('#sortLatest'), popularEl = $('#sortPopular');
@@ -189,8 +205,9 @@ function updateSortLabels(pop = false){
 }
 $('#sortLatest').addEventListener('animationend', e => e.currentTarget.classList.remove('pop'));
 $('#sortPopular').addEventListener('animationend', e => e.currentTarget.classList.remove('pop'));
-$('#search').oninput=render;$('#search').onchange=render;
-$('#sort').addEventListener('change',()=>{updateSortLabels(true);render();});
+function filterLoadedFeed(){if(!feedSkeleton.isConnected && !$('#retry')) render()}
+$('#search').oninput=filterLoadedFeed;$('#search').onchange=filterLoadedFeed;
+$('#sort').addEventListener('change',()=>{updateSortLabels(true);filterLoadedFeed();});
 updateSortLabels();
 let composeTimer = 0;
 function showComposer(){
@@ -380,7 +397,7 @@ $('#copyRoomLink').onclick=async()=>{
   $('#shareUrl').focus();$('#shareUrl').select();
  }finally{if(current===id&&roomVisit===visit)button.disabled=false;}
 };
-function reloadPrivateFeed(){rooms=[];render();load()}
+function reloadPrivateFeed(){rooms=[];load()}
 window.addEventListener('account-changed',reloadPrivateFeed);
 window.addEventListener('pageshow',e=>{if(e.persisted)reloadPrivateFeed()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)reloadPrivateFeed()});
