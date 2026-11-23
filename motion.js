@@ -114,6 +114,16 @@
     receipt.timer = setTimeout(() => clearReceipt(owner), 2800);
   }
 
+  const pageEnd = document.querySelector('#page-end');
+  const supportLink = document.querySelector('.support-link');
+  if (pageEnd && supportLink && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(entries => {
+      const latest = entries[entries.length - 1];
+      supportLink.classList.toggle('is-highlighted', latest.intersectionRatio >= 1);
+    }, {threshold: 1});
+    observer.observe(pageEnd);
+  }
+
   document.querySelectorAll('dialog').forEach(receiptFor);
   document.addEventListener('close', event => clearReceipt(event.target), true);
   window.MangaMotion = {success};
